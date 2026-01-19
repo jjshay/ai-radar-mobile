@@ -2610,13 +2610,17 @@
       <p class="gen-step-description" id="gen-step-description">Analyzing article content...</p>
 
       <!-- Audio Summary -->
-      <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px;">
+      <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
         <button id="audio-btn" onclick="toggleAudioSummary()" style="background: var(--gold); border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--bg-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
           <span id="audio-icon">🎧</span> <span id="audio-text">Listen</span>
+        </button>
+        <button id="mic-btn" onclick="toggleVoiceChat()" style="display: none; background: var(--accent); border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; color: white; cursor: pointer; align-items: center; gap: 6px;">
+          <span id="mic-icon">🎤</span> <span id="mic-text">Ask</span>
         </button>
         <span id="audio-status" style="font-size: 11px; color: var(--text-muted);"></span>
       </div>
       <audio id="summary-audio" style="display: none;"></audio>
+      <audio id="voice-response-audio" style="display: none;"></audio>
 
       <!-- Progress -->
       <div style="width: 100%; max-width: 250px;">
@@ -2732,7 +2736,10 @@
           isAudioPlaying = false;
           iconEl.textContent = '🎧';
           textEl.textContent = 'Replay';
-          statusEl.textContent = 'Finished';
+          statusEl.textContent = 'Ask me anything!';
+          // Show mic button for voice chat
+          const micBtn = document.getElementById('mic-btn');
+          if (micBtn) micBtn.style.display = 'flex';
         };
 
       } catch (error) {
@@ -2788,6 +2795,110 @@
       if (iconEl) iconEl.textContent = '🎧';
       if (textEl) textEl.textContent = 'Listen';
       if (statusEl) statusEl.textContent = '';
+      // Hide mic button on reset
+      const micBtn = document.getElementById('mic-btn');
+      if (micBtn) micBtn.style.display = 'none';
+    }
+
+    // ============================================
+    // VOICE CHAT - Interactive Q&A
+    // ============================================
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    async function toggleVoiceChat() {
+      const micBtn = document.getElementById('mic-btn');
+      const micIcon = document.getElementById('mic-icon');
+      const micText = document.getElementById('mic-text');
+      const statusEl = document.getElementById('audio-status');
+
+      if (isRecording) {
+        // Stop recording
+        mediaRecorder.stop();
+        isRecording = false;
+        micIcon.textContent = '🎤';
+        micText.textContent = 'Ask';
+        micBtn.style.background = 'var(--accent)';
+      } else {
+        // Start recording
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            // Stop all tracks
+            stream.getTracks().forEach(track => track.stop());
+
+            // Process recording
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            await sendVoiceQuestion(audioBlob);
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          micIcon.textContent = '⏹️';
+          micText.textContent = 'Stop';
+          micBtn.style.background = '#e74c3c';
+          statusEl.textContent = 'Listening...';
+        } catch (err) {
+          console.error('Mic error:', err);
+          statusEl.textContent = 'Mic access denied';
+        }
+      }
+    }
+
+    async function sendVoiceQuestion(audioBlob) {
+      const statusEl = document.getElementById('audio-status');
+      const responseAudio = document.getElementById('voice-response-audio');
+
+      statusEl.textContent = 'Processing...';
+
+      try {
+        // Convert blob to base64
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+
+        reader.onloadend = async () => {
+          const base64Audio = reader.result.split(',')[1];
+
+          const response = await fetch(`${API_BASE}/voice-chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              audio: base64Audio,
+              title: selectedArticle?.title || '',
+              summary: selectedArticle?.summary || selectedArticle?.description || ''
+            })
+          });
+
+          if (!response.ok) throw new Error('Voice chat failed');
+
+          const data = await response.json();
+          statusEl.textContent = `You: "${data.question.substring(0, 30)}..."`;
+
+          // Play response audio
+          const audioBytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
+          const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+          const audioUrl = URL.createObjectURL(blob);
+
+          responseAudio.src = audioUrl;
+          responseAudio.play();
+
+          responseAudio.onended = () => {
+            statusEl.textContent = 'Ask another question!';
+            URL.revokeObjectURL(audioUrl);
+          };
+        };
+      } catch (err) {
+        console.error('Voice chat error:', err);
+        statusEl.textContent = 'Could not process question';
+      }
     }
 
     let articles = [];
