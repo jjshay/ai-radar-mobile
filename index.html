@@ -3763,12 +3763,15 @@
           showToast('Not interested 👎');
           break;
         case 'down':
-          // SAVE TO LIST - Record positive feedback
+          // GO BACK - Return to source list
           exitY = window.innerHeight;
-          addToSavedForLater(article);
-          recordInterested(article);
-          showToast('Saved 📌');
-          break;
+          showToast('Back to sources');
+          card.style.transition = 'transform 0.3s ease';
+          card.style.transform = `translateY(${exitY}px)`;
+          setTimeout(() => {
+            showScreen('home');
+          }, 300);
+          return; // Don't continue to next card
       }
 
       card.style.transition = 'transform 0.3s ease';
