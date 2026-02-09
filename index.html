@@ -443,11 +443,17 @@
     .swipe-card .card-image {
       width: 100%;
       height: 100px;
-      background: var(--bg-secondary);
+      background-color: var(--bg-secondary);
       background-size: cover;
       background-position: center;
       position: relative;
       flex-shrink: 0;
+    }
+
+    .swipe-card .card-image.logo-fallback {
+      background-size: 60px 60px;
+      background-repeat: no-repeat;
+      background-position: center;
     }
 
     .swipe-card .card-image::after {
@@ -2655,18 +2661,6 @@
       <!-- Step Description -->
       <p class="gen-step-description" id="gen-step-description">Analyzing article content...</p>
 
-      <!-- Audio Summary -->
-      <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <button id="audio-btn" onclick="toggleAudioSummary()" style="background: var(--gold); border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--bg-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
-          <span id="audio-icon">🎧</span> <span id="audio-text">Listen</span>
-        </button>
-        <button id="mic-btn" onclick="toggleVoiceChat()" style="display: none; background: var(--accent); border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; color: white; cursor: pointer; align-items: center; gap: 6px;">
-          <span id="mic-icon">🎤</span> <span id="mic-text">Ask</span>
-        </button>
-        <span id="audio-status" style="font-size: 11px; color: var(--text-muted);"></span>
-      </div>
-      <audio id="summary-audio" style="display: none;"></audio>
-      <audio id="voice-response-audio" style="display: none;"></audio>
 
       <!-- Progress -->
       <div style="width: 100%; max-width: 250px;">
@@ -2709,288 +2703,6 @@
     // Use CORS proxy for browser access (needed for API calls from deployed site)
     const CORS_PROXY = 'https://corsproxy.io/?';
 
-    // OpenAI TTS for audio summaries - uses backend proxy for security
-    const OPENAI_API_KEY = null; // Moved to backend
-
-    let isAudioPlaying = false;
-    let cachedAudioUrl = null;
-
-    // Inspiring quotes for audio intros
-    const inspiringQuotes = [
-      "As Maya Angelou said, 'There is no greater agony than bearing an untold story inside you.'",
-      "In the words of Steve Jobs, 'Innovation distinguishes between a leader and a follower.'",
-      "Oscar Wilde reminded us, 'Be yourself; everyone else is already taken.'",
-      "As Albert Einstein said, 'Imagination is more important than knowledge.'",
-      "In the words of Rumi, 'What you seek is seeking you.'",
-      "Marie Curie said, 'Nothing in life is to be feared, it is only to be understood.'",
-      "As Walt Disney said, 'The way to get started is to quit talking and begin doing.'",
-      "Leonardo da Vinci wrote, 'Learning never exhausts the mind.'",
-      "As Nelson Mandela said, 'It always seems impossible until it's done.'",
-      "In the words of Coco Chanel, 'In order to be irreplaceable, one must always be different.'"
-    ];
-
-    // Audio summary functions - uses backend proxy for API calls
-    async function generateAudioSummary(article) {
-      const statusEl = document.getElementById('audio-status');
-      const btnEl = document.getElementById('audio-btn');
-      const iconEl = document.getElementById('audio-icon');
-      const textEl = document.getElementById('audio-text');
-      const audioEl = document.getElementById('summary-audio');
-
-      if (!article) {
-        statusEl.textContent = 'No article selected';
-        return;
-      }
-
-      statusEl.textContent = 'Generating summary...';
-      btnEl.disabled = true;
-
-      try {
-        // Get a random inspiring quote
-        const quote = inspiringQuotes[Math.floor(Math.random() * inspiringQuotes.length)];
-
-        // Call backend to generate audio summary
-        const intro = 'This AI Radar summary is brought to you by JJ Shay at jjshay.com — where you can find other projects and over 70 free AI reports to download.';
-        const fullSummary = intro + ' ... ' + (article.summary || article.description || '');
-        const response = await fetch(`${API_BASE}/audio-summary`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: article.title,
-            source: article.source || '',
-            summary: fullSummary,
-            quote: quote
-          })
-        });
-
-        if (!response.ok) throw new Error('Failed to generate audio');
-
-        statusEl.textContent = 'Loading audio...';
-        const audioBlob = await response.blob();
-        cachedAudioUrl = URL.createObjectURL(audioBlob);
-
-        audioEl.src = cachedAudioUrl;
-        audioEl.play();
-        isAudioPlaying = true;
-
-        iconEl.textContent = '⏸️';
-        textEl.textContent = 'Pause';
-        statusEl.textContent = 'Playing...';
-
-        audioEl.onended = () => {
-          isAudioPlaying = false;
-          iconEl.textContent = '🎧';
-          textEl.textContent = 'Replay';
-          statusEl.textContent = 'Ask me anything!';
-          // Show mic button for voice chat
-          const micBtn = document.getElementById('mic-btn');
-          if (micBtn) micBtn.style.display = 'flex';
-        };
-
-      } catch (error) {
-        console.error('Audio generation error:', error);
-        statusEl.textContent = 'Audio unavailable';
-      }
-
-      btnEl.disabled = false;
-    }
-
-    function toggleAudioSummary() {
-      const audioEl = document.getElementById('summary-audio');
-      const iconEl = document.getElementById('audio-icon');
-      const textEl = document.getElementById('audio-text');
-      const statusEl = document.getElementById('audio-status');
-
-      if (!cachedAudioUrl) {
-        // Generate new audio
-        generateAudioSummary(selectedArticle);
-      } else if (isAudioPlaying) {
-        // Pause
-        audioEl.pause();
-        isAudioPlaying = false;
-        iconEl.textContent = '▶️';
-        textEl.textContent = 'Resume';
-        statusEl.textContent = 'Paused';
-      } else {
-        // Resume or replay
-        audioEl.play();
-        isAudioPlaying = true;
-        iconEl.textContent = '⏸️';
-        textEl.textContent = 'Pause';
-        statusEl.textContent = 'Playing...';
-      }
-    }
-
-    function resetAudioState() {
-      const iconEl = document.getElementById('audio-icon');
-      const textEl = document.getElementById('audio-text');
-      const statusEl = document.getElementById('audio-status');
-      const audioEl = document.getElementById('summary-audio');
-
-      if (audioEl) {
-        audioEl.pause();
-        audioEl.src = '';
-      }
-      if (cachedAudioUrl) {
-        URL.revokeObjectURL(cachedAudioUrl);
-        cachedAudioUrl = null;
-      }
-      isAudioPlaying = false;
-
-      if (iconEl) iconEl.textContent = '🎧';
-      if (textEl) textEl.textContent = 'Listen';
-      if (statusEl) statusEl.textContent = '';
-      // Hide mic button on reset
-      const micBtn = document.getElementById('mic-btn');
-      if (micBtn) micBtn.style.display = 'none';
-    }
-
-    // ============================================
-    // VOICE CHAT - Interactive Q&A (Browser Speech APIs + Grok)
-    // ============================================
-    let isListening = false;
-    let speechRecognition = null;
-
-    function initSpeechRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) return null;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      return recognition;
-    }
-
-    async function toggleVoiceChat() {
-      const micBtn = document.getElementById('mic-btn');
-      const micIcon = document.getElementById('mic-icon');
-      const micText = document.getElementById('mic-text');
-      const statusEl = document.getElementById('audio-status');
-
-      if (isListening) {
-        // Stop listening
-        if (speechRecognition) speechRecognition.stop();
-        isListening = false;
-        micIcon.textContent = '🎤';
-        micText.textContent = 'Ask';
-        micBtn.style.background = 'var(--accent)';
-        return;
-      }
-
-      // Start listening
-      speechRecognition = initSpeechRecognition();
-      if (!speechRecognition) {
-        statusEl.textContent = 'Speech not supported in this browser';
-        return;
-      }
-
-      isListening = true;
-      micIcon.textContent = '⏹️';
-      micText.textContent = 'Stop';
-      micBtn.style.background = '#e74c3c';
-      statusEl.textContent = 'Listening...';
-
-      speechRecognition.onresult = async (event) => {
-        const question = event.results[0][0].transcript;
-        isListening = false;
-        micIcon.textContent = '🎤';
-        micText.textContent = 'Ask';
-        micBtn.style.background = 'var(--accent)';
-        statusEl.textContent = `"${question.substring(0, 40)}${question.length > 40 ? '...' : ''}"`;
-        await answerQuestion(question);
-      };
-
-      speechRecognition.onerror = (event) => {
-        console.error('Speech error:', event.error);
-        isListening = false;
-        micIcon.textContent = '🎤';
-        micText.textContent = 'Ask';
-        micBtn.style.background = 'var(--accent)';
-        statusEl.textContent = event.error === 'not-allowed' ? 'Mic access denied' : 'Could not hear you, try again';
-      };
-
-      speechRecognition.onend = () => {
-        if (isListening) {
-          isListening = false;
-          micIcon.textContent = '🎤';
-          micText.textContent = 'Ask';
-          micBtn.style.background = 'var(--accent)';
-        }
-      };
-
-      speechRecognition.start();
-    }
-
-    // Pre-load best available voice for instant TTS
-    let bestVoice = null;
-    function loadVoices() {
-      const voices = window.speechSynthesis?.getVoices() || [];
-      bestVoice = voices.find(v => v.name === 'Samantha')
-        || voices.find(v => v.name.includes('Google US English'))
-        || voices.find(v => v.name.includes('Karen'))
-        || voices.find(v => v.name.includes('Moira'))
-        || voices.find(v => v.name.includes('Natural') && v.lang.startsWith('en'))
-        || voices.find(v => v.name.includes('Enhanced') && v.lang.startsWith('en'))
-        || voices.find(v => v.lang.startsWith('en-') && v.localService)
-        || null;
-      if (bestVoice) console.log('Voice loaded:', bestVoice.name);
-    }
-    if ('speechSynthesis' in window) {
-      loadVoices();
-      speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-    async function answerQuestion(question) {
-      const statusEl = document.getElementById('audio-status');
-
-      try {
-        statusEl.textContent = 'Thinking...';
-
-        const ctx = selectedArticle
-          ? `"${selectedArticle.title}" - ${(selectedArticle.summary || '').substring(0, 150)}`
-          : '';
-
-        const ctrl = new AbortController();
-        setTimeout(() => ctrl.abort(), 8000);
-        const resp = await fetch('/api/grok', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'grok-3-mini',
-            messages: [{
-              role: 'system',
-              content: 'Reply in 1 sentence, max 20 words.'
-            }, {
-              role: 'user',
-              content: `${ctx}\n${question}`
-            }],
-            temperature: 0.3,
-            max_tokens: 50
-          }),
-          signal: ctrl.signal
-        });
-
-        const data = await resp.json();
-        const answer = data.choices?.[0]?.message?.content || 'Sorry, could not answer.';
-
-        // Speak instantly with browser TTS - no second API call
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(answer);
-          u.rate = 1.0;
-          u.pitch = 1.0;
-          if (bestVoice) u.voice = bestVoice;
-          statusEl.textContent = 'Speaking...';
-          u.onend = () => { statusEl.textContent = 'Ask another question!'; };
-          window.speechSynthesis.speak(u);
-        } else {
-          statusEl.textContent = answer;
-        }
-      } catch (err) {
-        console.error('Voice chat error:', err);
-        statusEl.textContent = err.name === 'AbortError' ? 'Too slow, try again' : 'Could not answer, try again';
-      }
-    }
 
     let articles = [];
     let favorites = JSON.parse(localStorage.getItem('ai-radar-favorites') || '[]');
@@ -3239,12 +2951,6 @@
     // SCREEN NAVIGATION
     // ============================================
     function showScreen(screenId) {
-      // Reset audio when leaving generating screen
-      const currentScreen = document.querySelector('.screen.active');
-      if (currentScreen && currentScreen.id === 'screen-generating' && screenId !== 'generating') {
-        resetAudioState();
-      }
-
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById('screen-' + screenId).classList.add('active');
 
@@ -3252,9 +2958,6 @@
         renderCards();
       } else if (screenId === 'favorites') {
         renderFavorites();
-      } else if (screenId === 'generating') {
-        // Reset audio state when entering generating screen (fresh start)
-        resetAudioState();
       }
     }
 
@@ -3837,8 +3540,9 @@
       card.style.opacity = stackIndex === 0 ? '1' : `${1 - stackIndex * 0.15}`;
       card.dataset.id = article.id;
 
-      // Use article image or generate a placeholder
-      const imageUrl = article.image || `https://picsum.photos/400/200?random=${article.id}`;
+      // Use article image or logo placeholder
+      const imageUrl = article.image || 'assets/logo-white.png';
+      const isLogoFallback = !article.image;
 
       // Extract key topics from title/summary
       const titleWords = (article.title + ' ' + article.summary).toUpperCase();
@@ -3870,7 +3574,7 @@
         : '';
 
       card.innerHTML = `
-        <div class="card-image" style="background-image: url('${imageUrl}')">
+        <div class="card-image${isLogoFallback ? ' logo-fallback' : ''}" style="background-image: url('${imageUrl}')">
           <div style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; padding: 3px 8px; border-radius: 10px; font-weight: 600; font-size: 10px;">
             ${cardNum}/${totalCards}
           </div>
@@ -4170,8 +3874,16 @@
       const modal = document.getElementById('article-modal');
 
       // Populate modal
-      const imageUrl = article.image || `https://picsum.photos/400/200?random=${article.id}`;
-      document.getElementById('modal-image').style.backgroundImage = `url('${imageUrl}')`;
+      const imageUrl = article.image || 'assets/logo-white.png';
+      const modalImage = document.getElementById('modal-image');
+      modalImage.style.backgroundImage = `url('${imageUrl}')`;
+      if (!article.image) {
+        modalImage.style.backgroundSize = '60px 60px';
+        modalImage.style.backgroundRepeat = 'no-repeat';
+        modalImage.style.backgroundPosition = 'center';
+      } else {
+        modalImage.style.backgroundSize = 'cover';
+      }
       document.getElementById('modal-source').textContent = article.source;
       document.getElementById('modal-title').textContent = article.title;
       document.getElementById('modal-date').textContent = article.date || 'Today';
@@ -4324,15 +4036,6 @@
 
       // Show generating screen
       showScreen('generating');
-
-      // Lazy load audio summary after a few seconds (gives time for UI to settle)
-      setTimeout(() => {
-        if (selectedArticle && !isAudioPlaying) {
-          console.log('Lazy loading audio summary...');
-          document.getElementById('audio-status').textContent = 'Preparing audio...';
-          generateAudioSummary(selectedArticle);
-        }
-      }, 3000); // 3 second delay for lazy load effect
 
       // Set up single card display
       document.getElementById('step-num').textContent = '1';
@@ -4504,8 +4207,16 @@
       selectedArticle = article;
 
       // Set image
-      const imageUrl = article.image || `https://picsum.photos/400/200?random=${article.id}`;
-      document.getElementById('detail-image').style.backgroundImage = `url('${imageUrl}')`;
+      const imageUrl = article.image || 'assets/logo-white.png';
+      const detailImage = document.getElementById('detail-image');
+      detailImage.style.backgroundImage = `url('${imageUrl}')`;
+      if (!article.image) {
+        detailImage.style.backgroundSize = '60px 60px';
+        detailImage.style.backgroundRepeat = 'no-repeat';
+        detailImage.style.backgroundPosition = 'center';
+      } else {
+        detailImage.style.backgroundSize = 'cover';
+      }
 
       document.getElementById('detail-source').textContent = article.source;
       document.getElementById('detail-title').textContent = article.title;
