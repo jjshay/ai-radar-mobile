@@ -2760,8 +2760,8 @@
 
       try {
         const quote = inspiringQuotes[Math.floor(Math.random() * inspiringQuotes.length)];
-        const intro = 'This AI Radar summary is brought to you by JJ Shay at jjshay.com — where you can find other projects and over 70 free AI reports to download.';
-        const fullSummary = intro + ' ... ' + (article.summary || article.description || '');
+        const outro = ' ... This AI Radar summary was brought to you by JJ Shay. Check out jjshay.com for other projects and over 70 free AI reports to download.';
+        const fullSummary = (article.summary || article.description || '') + outro;
         const response = await fetch(`${API_BASE}/audio-summary`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
