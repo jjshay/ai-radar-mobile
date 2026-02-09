@@ -3168,7 +3168,9 @@
           const resp = await fetch(`/api/newsapi?q=${encodeURIComponent(selectedTopic)}&pageSize=20`);
           const data = await resp.json();
           if (data.articles) {
-            directArticles = data.articles.map(a => ({
+            directArticles = data.articles.map(a => {
+              const text = (a.title || '') + ' ' + (a.description || '') + ' ' + (a.content || '');
+              return {
               id: Date.now() + Math.random(),
               title: a.title,
               summary: a.description || '',
@@ -3177,14 +3179,18 @@
               source: 'newsapi',
               publishedAt: a.publishedAt,
               date: formatDate(a.publishedAt),
+              words: text.split(/\s+/).filter(w => w).length,
               avgScore: (70 + Math.random() * 25).toFixed(1)
-            }));
+            };
+            });
           }
         } else if (source === 'newsdata') {
           const resp = await fetch(`/api/newsdata?q=${encodeURIComponent(selectedTopic)}&language=en`);
           const data = await resp.json();
           if (data.results) {
-            directArticles = data.results.map(a => ({
+            directArticles = data.results.map(a => {
+              const text = (a.title || '') + ' ' + (a.description || '') + ' ' + (a.content || '');
+              return {
               id: Date.now() + Math.random(),
               title: a.title,
               summary: a.description || '',
@@ -3193,8 +3199,10 @@
               source: 'newsdata',
               publishedAt: a.pubDate,
               date: formatDate(a.pubDate),
+              words: text.split(/\s+/).filter(w => w).length,
               avgScore: (70 + Math.random() * 25).toFixed(1)
-            }));
+            };
+            });
           }
         } else if (source === 'perplexity') {
           const resp = await fetch('/api/perplexity', {
@@ -3212,7 +3220,9 @@
           if (data.choices?.[0]?.message?.content) {
             try {
               const parsed = JSON.parse(data.choices[0].message.content);
-              directArticles = parsed.map(a => ({
+              directArticles = parsed.map(a => {
+                const text = (a.title || '') + ' ' + (a.summary || '');
+                return {
                 id: Date.now() + Math.random(),
                 title: a.title,
                 summary: a.summary || '',
@@ -3220,8 +3230,10 @@
                 source: 'perplexity',
                 publishedAt: a.publishedAt,
                 date: formatDate(a.publishedAt || new Date().toISOString()),
+                words: text.split(/\s+/).filter(w => w).length,
                 avgScore: (70 + Math.random() * 25).toFixed(1)
-              }));
+              };
+              });
             } catch (e) { console.log('Perplexity parse error:', e); }
           }
         } else if (source === 'grok') {
@@ -3243,7 +3255,9 @@
               // Strip markdown code fences if present
               content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
               const parsed = JSON.parse(content);
-              directArticles = parsed.map(a => ({
+              directArticles = parsed.map(a => {
+                const text = (a.title || '') + ' ' + (a.summary || '');
+                return {
                 id: Date.now() + Math.random(),
                 title: a.title,
                 summary: a.summary || '',
@@ -3251,8 +3265,10 @@
                 source: 'grok',
                 publishedAt: a.publishedAt,
                 date: formatDate(a.publishedAt || new Date().toISOString()),
+                words: text.split(/\s+/).filter(w => w).length,
                 avgScore: (70 + Math.random() * 25).toFixed(1)
-              }));
+              };
+              });
             } catch (e) { console.log('Grok parse error:', e); }
           }
         }
@@ -3562,13 +3578,13 @@
       const cardNum = currentCardIndex + stackIndex + 1;
       const totalCards = articles.length;
 
-      // Get individual scores (convert to percentages)
+      // Get individual scores (already 0-100 scale)
       const scores = article.scores || {};
-      const gptScore = Math.round((scores.gpt || Math.floor(Math.random() * 3) + 7) * 10);
-      const claudeScore = Math.round((scores.claude || Math.floor(Math.random() * 3) + 7) * 10);
-      const geminiScore = Math.round((scores.gemini || Math.floor(Math.random() * 3) + 7) * 10);
-      const grokScore = Math.round((scores.grok || Math.floor(Math.random() * 3) + 7) * 10);
-      const pplxScore = Math.round((scores.pplx || Math.floor(Math.random() * 3) + 7) * 10);
+      const gptScore = Math.round(scores.gpt || (Math.floor(Math.random() * 25) + 70));
+      const claudeScore = Math.round(scores.claude || (Math.floor(Math.random() * 25) + 70));
+      const geminiScore = Math.round(scores.gemini || (Math.floor(Math.random() * 25) + 70));
+      const grokScore = Math.round(scores.grok || (Math.floor(Math.random() * 25) + 70));
+      const pplxScore = Math.round(scores.pplx || (Math.floor(Math.random() * 25) + 70));
 
       card.innerHTML = `
         <div class="card-image" style="background-image: url('${imageUrl}')">
@@ -3588,7 +3604,7 @@
           </div>
           <div class="ai-scores-section">
             <div style="text-align: center; margin-bottom: 6px;">
-              <span style="font-size: 18px; font-weight: 700; color: var(--gold);">${Math.round(parseFloat(article.avgScore))}%</span>
+              <span style="font-size: 18px; font-weight: 700; color: var(--gold);">${Math.round((gptScore + claudeScore + geminiScore + grokScore + pplxScore) / 5)}%</span>
               <span style="font-size: 10px; color: #888; margin-left: 4px;">avg</span>
             </div>
             <div style="display: flex; justify-content: space-around; gap: 4px;">
@@ -3881,15 +3897,23 @@
       document.getElementById('modal-date').textContent = article.date || 'Today';
       document.getElementById('modal-pages').textContent = `${article.pages || 3} pages`;
       document.getElementById('modal-description').textContent = article.summary;
-      document.getElementById('modal-score').textContent = Math.round(parseFloat(article.avgScore)) + '%';
+
+      // Compute individual scores
+      const mGpt = Math.round(article.scores?.gpt || 80);
+      const mClaude = Math.round(article.scores?.claude || 80);
+      const mGemini = Math.round(article.scores?.gemini || 80);
+      const mGrok = Math.round(article.scores?.grok || 80);
+      const mPplx = Math.round(article.scores?.pplx || 80);
+      const mAvg = Math.round((mGpt + mClaude + mGemini + mGrok + mPplx) / 5);
+      document.getElementById('modal-score').textContent = mAvg + '%';
 
       // Generate AI consensus text - each on its own line (scores as percentages)
       const consensusTexts = [
-        `<strong>GPT</strong> (${Math.round(article.scores?.gpt || 80)}%): ${article.rationales?.gpt || 'High relevance score'}`,
-        `<strong>Claude</strong> (${Math.round(article.scores?.claude || 80)}%): ${article.rationales?.claude || 'Well-sourced content'}`,
-        `<strong>Gemini</strong> (${Math.round(article.scores?.gemini || 80)}%): ${article.rationales?.gemini || 'Good engagement potential'}`,
-        `<strong>Grok</strong> (${Math.round(article.scores?.grok || 80)}%): ${article.rationales?.grok || 'Trending topic'}`,
-        `<strong>Perplexity</strong> (${Math.round(article.scores?.pplx || 80)}%): ${article.rationales?.pplx || 'Multiple sources verified'}`
+        `<strong>GPT</strong> (${mGpt}%): ${article.rationales?.gpt || 'High relevance score'}`,
+        `<strong>Claude</strong> (${mClaude}%): ${article.rationales?.claude || 'Well-sourced content'}`,
+        `<strong>Gemini</strong> (${mGemini}%): ${article.rationales?.gemini || 'Good engagement potential'}`,
+        `<strong>Grok</strong> (${mGrok}%): ${article.rationales?.grok || 'Trending topic'}`,
+        `<strong>Perplexity</strong> (${mPplx}%): ${article.rationales?.pplx || 'Multiple sources verified'}`
       ];
       document.getElementById('modal-consensus').innerHTML = consensusTexts.join('<br>');
 
@@ -4310,7 +4334,8 @@
         if (topics.length === 0) topics.push('Tech', 'News');
 
         const wordCount = article.words || 0;
-        const avgScore = Math.round(parseFloat(article.avgScore));
+        const s = article.scores || {};
+        const avgScore = Math.round(((s.gpt || 80) + (s.claude || 80) + (s.gemini || 80) + (s.grok || 80) + (s.pplx || 80)) / 5);
         const summary = article.summary || 'No description available.';
 
         return `
