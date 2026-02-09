@@ -3493,13 +3493,13 @@
           words: Math.floor(Math.random() * 1500) + 500, // 500-2000 words (always >= 500)
           rationales: article.rationales,
           scores: {
-            gpt: Math.floor(Math.random() * 3) + 7,
-            claude: Math.floor(Math.random() * 3) + 7,
-            gemini: Math.floor(Math.random() * 3) + 7,
-            grok: Math.floor(Math.random() * 3) + 7,
-            pplx: Math.floor(Math.random() * 3) + 7
+            gpt: Math.floor(Math.random() * 25) + 70,
+            claude: Math.floor(Math.random() * 25) + 70,
+            gemini: Math.floor(Math.random() * 25) + 70,
+            grok: Math.floor(Math.random() * 25) + 70,
+            pplx: Math.floor(Math.random() * 25) + 70
           },
-          avgScore: (Math.random() * 2 + 7).toFixed(1)
+          avgScore: (Math.random() * 20 + 70).toFixed(1)
         };
       });
     }
@@ -3588,7 +3588,7 @@
           </div>
           <div class="ai-scores-section">
             <div style="text-align: center; margin-bottom: 6px;">
-              <span style="font-size: 18px; font-weight: 700; color: var(--gold);">${Math.round(parseFloat(article.avgScore) * 10)}%</span>
+              <span style="font-size: 18px; font-weight: 700; color: var(--gold);">${Math.round(parseFloat(article.avgScore))}%</span>
               <span style="font-size: 10px; color: #888; margin-left: 4px;">avg</span>
             </div>
             <div style="display: flex; justify-content: space-around; gap: 4px;">
@@ -3881,15 +3881,15 @@
       document.getElementById('modal-date').textContent = article.date || 'Today';
       document.getElementById('modal-pages').textContent = `${article.pages || 3} pages`;
       document.getElementById('modal-description').textContent = article.summary;
-      document.getElementById('modal-score').textContent = Math.round(parseFloat(article.avgScore) * 10) + '%';
+      document.getElementById('modal-score').textContent = Math.round(parseFloat(article.avgScore)) + '%';
 
       // Generate AI consensus text - each on its own line (scores as percentages)
       const consensusTexts = [
-        `<strong>GPT</strong> (${Math.round((article.scores?.gpt || 8) * 10)}%): ${article.rationales?.gpt || 'High relevance score'}`,
-        `<strong>Claude</strong> (${Math.round((article.scores?.claude || 8) * 10)}%): ${article.rationales?.claude || 'Well-sourced content'}`,
-        `<strong>Gemini</strong> (${Math.round((article.scores?.gemini || 8) * 10)}%): ${article.rationales?.gemini || 'Good engagement potential'}`,
-        `<strong>Grok</strong> (${Math.round((article.scores?.grok || 8) * 10)}%): ${article.rationales?.grok || 'Trending topic'}`,
-        `<strong>Perplexity</strong> (${Math.round((article.scores?.pplx || 8) * 10)}%): ${article.rationales?.pplx || 'Multiple sources verified'}`
+        `<strong>GPT</strong> (${Math.round(article.scores?.gpt || 80)}%): ${article.rationales?.gpt || 'High relevance score'}`,
+        `<strong>Claude</strong> (${Math.round(article.scores?.claude || 80)}%): ${article.rationales?.claude || 'Well-sourced content'}`,
+        `<strong>Gemini</strong> (${Math.round(article.scores?.gemini || 80)}%): ${article.rationales?.gemini || 'Good engagement potential'}`,
+        `<strong>Grok</strong> (${Math.round(article.scores?.grok || 80)}%): ${article.rationales?.grok || 'Trending topic'}`,
+        `<strong>Perplexity</strong> (${Math.round(article.scores?.pplx || 80)}%): ${article.rationales?.pplx || 'Multiple sources verified'}`
       ];
       document.getElementById('modal-consensus').innerHTML = consensusTexts.join('<br>');
 
@@ -4202,11 +4202,11 @@
       document.getElementById('detail-title').textContent = article.title;
       document.getElementById('detail-summary').textContent = article.summary;
 
-      document.getElementById('score-gpt').textContent = Math.round((article.scores?.gpt || 8) * 10) + '%';
-      document.getElementById('score-claude').textContent = Math.round((article.scores?.claude || 8) * 10) + '%';
-      document.getElementById('score-gemini').textContent = Math.round((article.scores?.gemini || 8) * 10) + '%';
-      document.getElementById('score-grok').textContent = Math.round((article.scores?.grok || 8) * 10) + '%';
-      document.getElementById('score-pplx').textContent = Math.round((article.scores?.pplx || 8) * 10) + '%';
+      document.getElementById('score-gpt').textContent = Math.round(article.scores?.gpt || 80) + '%';
+      document.getElementById('score-claude').textContent = Math.round(article.scores?.claude || 80) + '%';
+      document.getElementById('score-gemini').textContent = Math.round(article.scores?.gemini || 80) + '%';
+      document.getElementById('score-grok').textContent = Math.round(article.scores?.grok || 80) + '%';
+      document.getElementById('score-pplx').textContent = Math.round(article.scores?.pplx || 80) + '%';
 
       showScreen('detail');
     }
@@ -4310,7 +4310,7 @@
         if (topics.length === 0) topics.push('Tech', 'News');
 
         const wordCount = article.words || 0;
-        const avgScore = Math.round(parseFloat(article.avgScore) * 10);
+        const avgScore = Math.round(parseFloat(article.avgScore));
         const summary = article.summary || 'No description available.';
 
         return `
