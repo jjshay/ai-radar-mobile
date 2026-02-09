@@ -593,7 +593,59 @@
     .article-tag.viral { background: linear-gradient(135deg, #06b6d4, #0891b2); }
     .article-tag.must-read { background: linear-gradient(135deg, #10b981, #059669); }
     .article-tag.deep-dive { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .article-tag.game-changer { background: linear-gradient(135deg, #D4AF37, #f59e0b); animation: breakingPulse 2s ease-in-out infinite; }
     @keyframes breakingPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+    /* Home Button */
+    .home-btn {
+      margin: 8px auto 0;
+      display: block;
+      background: transparent;
+      border: 1px solid rgba(212,175,55,0.3);
+      color: var(--gold);
+      padding: 8px 24px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .home-btn:active { background: rgba(212,175,55,0.15); border-color: var(--gold); }
+
+    /* Abort Button */
+    .abort-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #999;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+      z-index: 10;
+    }
+    .abort-btn:active { background: rgba(255,0,0,0.2); color: #ef4444; }
+
+    /* Audio Stop Button */
+    .audio-stop-btn {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #ef4444;
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .audio-stop-btn:active { background: rgba(239,68,68,0.3); }
 
     /* AI Detail Popup */
     .ai-detail-popup {
@@ -2348,6 +2400,8 @@
           <div class="arrow">CREATE →</div>
         </div>
       </div>
+
+      <button class="home-btn" onclick="goHome()">🏠 Home</button>
     </div>
 
     <!-- SCREEN 3: ARTICLE DETAIL -->
@@ -2651,7 +2705,8 @@
     </div>
 
     <!-- SCREEN: Card Generation -->
-    <div id="screen-generating" class="screen" style="justify-content: center; align-items: center; padding: 20px;">
+    <div id="screen-generating" class="screen" style="justify-content: center; align-items: center; padding: 20px; position: relative;">
+      <button class="abort-btn" onclick="abortGeneration()" title="Cancel">✕</button>
       <!-- AI Radar Logo -->
       <div class="gamma-highlight">
         <div class="gamma-logo-box">
@@ -2676,9 +2731,12 @@
 
       <!-- Audio Summary -->
       <div style="margin: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-        <button id="audio-btn" onclick="toggleAudioSummary()" style="background: var(--gold); border: none; padding: 10px 24px; border-radius: 24px; font-size: 14px; font-weight: 700; color: var(--bg-primary); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 12px rgba(212,175,55,0.3);">
-          <span id="audio-icon">🎧</span> <span id="audio-text">Listen to Summary</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button id="audio-btn" onclick="toggleAudioSummary()" style="background: var(--gold); border: none; padding: 10px 24px; border-radius: 24px; font-size: 14px; font-weight: 700; color: var(--bg-primary); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 12px rgba(212,175,55,0.3);">
+            <span id="audio-icon">🎧</span> <span id="audio-text">Listen to Summary</span>
+          </button>
+          <button id="audio-stop-btn" class="audio-stop-btn" onclick="stopAudio()" style="display: none;">⏹ Stop</button>
+        </div>
         <span id="audio-status" style="font-size: 11px; color: var(--text-muted);"></span>
       </div>
       <audio id="summary-audio" style="display: none;"></audio>
@@ -2786,12 +2844,15 @@
         iconEl.textContent = '⏸️';
         textEl.textContent = 'Pause';
         statusEl.textContent = 'Playing...';
+        const stopBtn = document.getElementById('audio-stop-btn');
+        if (stopBtn) stopBtn.style.display = 'inline-block';
 
         audioEl.onended = () => {
           isAudioPlaying = false;
           iconEl.textContent = '🎧';
           textEl.textContent = 'Replay';
           statusEl.textContent = '';
+          if (stopBtn) stopBtn.style.display = 'none';
         };
 
       } catch (error) {
@@ -2807,6 +2868,7 @@
       const iconEl = document.getElementById('audio-icon');
       const textEl = document.getElementById('audio-text');
       const statusEl = document.getElementById('audio-status');
+      const stopBtn = document.getElementById('audio-stop-btn');
 
       if (!cachedAudioUrl) {
         generateAudioSummary(selectedArticle);
@@ -2816,13 +2878,21 @@
         iconEl.textContent = '▶️';
         textEl.textContent = 'Resume';
         statusEl.textContent = 'Paused';
+        if (stopBtn) stopBtn.style.display = 'inline-block';
       } else {
         audioEl.play();
         isAudioPlaying = true;
         iconEl.textContent = '⏸️';
         textEl.textContent = 'Pause';
         statusEl.textContent = 'Playing...';
+        if (stopBtn) stopBtn.style.display = 'inline-block';
       }
+    }
+
+    function stopAudio() {
+      resetAudioState();
+      const stopBtn = document.getElementById('audio-stop-btn');
+      if (stopBtn) stopBtn.style.display = 'none';
     }
 
     function resetAudioState() {
@@ -3089,6 +3159,38 @@
       }
     }
 
+    function goHome() {
+      currentCardIndex = 0;
+      articles = [];
+      showScreen('home');
+      // Reset fetch buttons
+      document.querySelectorAll('.source-btn').forEach(btn => {
+        btn.classList.remove('fetching', 'done');
+        btn.querySelector('.count').textContent = '0';
+      });
+      const fetchBtn = document.querySelector('.fetch-all-btn');
+      if (fetchBtn) {
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = selectedSources.size > 0
+          ? `FETCH ${selectedSources.size} SOURCE${selectedSources.size > 1 ? 'S' : ''}`
+          : 'FETCH ALL SOURCES';
+      }
+    }
+
+    function abortGeneration() {
+      // Stop polling
+      if (generationPollInterval) {
+        clearInterval(generationPollInterval);
+        generationPollInterval = null;
+      }
+      // Reset audio
+      resetAudioState();
+      const stopBtn = document.getElementById('audio-stop-btn');
+      if (stopBtn) stopBtn.style.display = 'none';
+      // Go back to swipe
+      showScreen('swipe');
+    }
+
     // ============================================
     // SCREEN NAVIGATION
     // ============================================
@@ -3292,6 +3394,84 @@
     }
 
     function finishAndShowSwipe() {
+      const totalBefore = articles.length;
+
+      // --- DEDUP: Remove articles with very similar titles ---
+      try {
+        const normalize = (t) => (t || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+        const seen = [];
+        const deduped = [];
+        for (const a of articles) {
+          const norm = normalize(a.title);
+          const isDupe = seen.some(s => {
+            if (norm === s) return true;
+            // Check if one title contains 80%+ of the other's words
+            const wordsA = norm.split(' ');
+            const wordsB = s.split(' ');
+            const overlap = wordsA.filter(w => wordsB.includes(w)).length;
+            return overlap >= Math.min(wordsA.length, wordsB.length) * 0.7;
+          });
+          if (!isDupe) {
+            seen.push(norm);
+            deduped.push(a);
+          }
+        }
+        const dupesRemoved = totalBefore - deduped.length;
+        if (dupesRemoved > 0) console.log(`Dedup: removed ${dupesRemoved} duplicate articles`);
+        articles = deduped;
+      } catch (e) { console.error('Dedup error:', e); }
+
+      // --- TRENDING: Tag articles whose title appears across multiple sources ---
+      try {
+        const normalize = (t) => (t || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+        for (const a of articles) {
+          const norm = normalize(a.title);
+          const words = norm.split(' ');
+          const sourcesFound = new Set();
+          sourcesFound.add(a.source);
+          for (const b of articles) {
+            if (b.id === a.id) continue;
+            const normB = normalize(b.title);
+            const wordsB = normB.split(' ');
+            const overlap = words.filter(w => wordsB.includes(w)).length;
+            if (overlap >= Math.min(words.length, wordsB.length) * 0.5) {
+              sourcesFound.add(b.source);
+            }
+          }
+          if (sourcesFound.size >= 2) {
+            if (!a.tags) a.tags = [];
+            if (!a.tags.includes('Trending')) a.tags.push('Trending');
+            a.sourceCount = sourcesFound.size;
+          }
+        }
+      } catch (e) { console.error('Trending tag error:', e); }
+
+      // --- GAME CHANGER: Tag articles with high avg scores ---
+      try {
+        for (const a of articles) {
+          const avg = parseFloat(a.avgScore) || 0;
+          if (avg >= 93) {
+            if (!a.tags) a.tags = [];
+            if (!a.tags.includes('Game Changer')) a.tags.push('Game Changer');
+          }
+        }
+      } catch (e) { console.error('Game Changer tag error:', e); }
+
+      // --- FILTER: Remove articles under 500 words ---
+      try {
+        const beforeFilter = articles.length;
+        const filtered = articles.filter(a => (a.words || 0) >= 500);
+        // If filtering removes >80% of articles, use a lower threshold
+        if (filtered.length < beforeFilter * 0.2 && beforeFilter > 3) {
+          const softFiltered = articles.filter(a => (a.words || 0) >= 50);
+          console.log(`500w filter too aggressive (${filtered.length}/${beforeFilter} left), using 50w threshold: ${softFiltered.length} remain`);
+          articles = softFiltered;
+        } else {
+          if (beforeFilter - filtered.length > 0) console.log(`Filtered out ${beforeFilter - filtered.length} articles under 500 words`);
+          articles = filtered;
+        }
+      } catch (e) { console.error('Filter error:', e); }
+
       // Sort articles by combined score
       try {
         articles.sort((a, b) => {
@@ -3305,7 +3485,7 @@
       } catch (sortErr) {
         console.error('Sort error:', sortErr);
       }
-      console.log('Transitioning to swipe screen with', articles.length, 'articles');
+      console.log(`Transitioning to swipe screen with ${articles.length} articles (from ${totalBefore} raw)`);
       showScreen('swipe');
     }
 
@@ -3719,7 +3899,7 @@
       const sentiment = article.sentiment || 'neutral';
       const sentimentLabel = sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
       const articleTags = article.tags || [];
-      const tagClasses = { 'Trending': 'trending', 'Hot': 'hot', 'Top Article': 'top-article', 'Breaking': 'breaking', 'Viral': 'viral', 'Must Read': 'must-read', 'Deep Dive': 'deep-dive' };
+      const tagClasses = { 'Trending': 'trending', 'Hot': 'hot', 'Top Article': 'top-article', 'Breaking': 'breaking', 'Viral': 'viral', 'Must Read': 'must-read', 'Deep Dive': 'deep-dive', 'Game Changer': 'game-changer' };
       const tagsHtml = articleTags.length > 0
         ? `<div class="article-tags">${articleTags.map(t => `<span class="article-tag ${tagClasses[t] || ''}">${t}</span>`).join('')}</div>`
         : '';
@@ -4498,7 +4678,7 @@
         const sentiment = article.sentiment || 'neutral';
         const sentimentLabel = sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
         const articleTags = article.tags || [];
-        const tagClasses = { 'Trending': 'trending', 'Hot': 'hot', 'Top Article': 'top-article', 'Breaking': 'breaking', 'Viral': 'viral', 'Must Read': 'must-read', 'Deep Dive': 'deep-dive' };
+        const tagClasses = { 'Trending': 'trending', 'Hot': 'hot', 'Top Article': 'top-article', 'Breaking': 'breaking', 'Viral': 'viral', 'Must Read': 'must-read', 'Deep Dive': 'deep-dive', 'Game Changer': 'game-changer' };
 
         return `
           <div class="favorite-item" data-id="${article.id}" onclick="toggleFavExpand(this)">
