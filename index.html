@@ -2493,11 +2493,9 @@
         <div class="action-buttons">
           <a href="#" class="action-btn gamma" id="gamma-link" target="_blank">
             <span class="btn-icon">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
+              <img src="logos/gamma.png" alt="AI Radar" style="width: 28px; height: 28px; border-radius: 6px;">
             </span>
-            <span class="btn-label">Gamma</span>
+            <span class="btn-label">Slides</span>
           </a>
           <a href="#" class="action-btn download" id="download-link" target="_blank">
             <span class="btn-icon">
@@ -2615,11 +2613,11 @@
 
     <!-- SCREEN: Card Generation -->
     <div id="screen-generating" class="screen" style="justify-content: center; align-items: center; padding: 20px;">
-      <!-- Gamma Logo -->
+      <!-- AI Radar Logo -->
       <div class="gamma-highlight">
         <div class="gamma-logo-box">
-          <img src="logos/gamma.png" alt="Gamma" style="width: 24px; height: 24px; border-radius: 6px;">
-          <span>Gamma</span>
+          <img src="logos/gamma.png" alt="AI Radar" style="width: 24px; height: 24px; border-radius: 6px;">
+          <span>AI Radar</span>
         </div>
       </div>
 
@@ -2911,9 +2909,11 @@
         statusEl.textContent = 'Thinking...';
 
         const articleContext = selectedArticle
-          ? `Article: "${selectedArticle.title}"\nSummary: ${(selectedArticle.summary || '').substring(0, 500)}\nSource: ${selectedArticle.source || 'unknown'}`
+          ? `Article: "${selectedArticle.title}"\nSummary: ${(selectedArticle.summary || '').substring(0, 300)}\nSource: ${selectedArticle.source || 'unknown'}`
           : 'No specific article selected.';
 
+        const grokCtrl = new AbortController();
+        const grokTimer = setTimeout(() => grokCtrl.abort(), 12000);
         const resp = await fetch('/api/grok', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2921,35 +2921,40 @@
             model: 'grok-3-mini',
             messages: [{
               role: 'system',
-              content: 'You are a helpful AI news analyst. Answer questions about the article concisely in 2-3 sentences. Be direct and insightful.'
+              content: 'Answer in 1-2 short sentences. Be direct.'
             }, {
               role: 'user',
               content: `${articleContext}\n\nQuestion: ${question}`
             }],
             temperature: 0.5
-          })
+          }),
+          signal: grokCtrl.signal
         });
+        clearTimeout(grokTimer);
 
         const data = await resp.json();
         const answer = data.choices?.[0]?.message?.content || 'Sorry, I could not generate an answer.';
 
-        statusEl.textContent = answer;
+        // Don't show text - just speak it
+        statusEl.textContent = 'Speaking...';
 
-        // Use OpenAI TTS for natural voice (same as audio summaries)
         try {
-          statusEl.textContent = 'Speaking...';
+          const ttsCtrl = new AbortController();
+          const ttsTimer = setTimeout(() => ttsCtrl.abort(), 10000);
           const ttsResp = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: answer, voice: 'nova' })
+            body: JSON.stringify({ text: answer, voice: 'nova' }),
+            signal: ttsCtrl.signal
           });
+          clearTimeout(ttsTimer);
 
           if (ttsResp.ok) {
             const audioBlob = await ttsResp.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
             responseAudio.src = audioUrl;
             responseAudio.play();
-            statusEl.textContent = answer;
+            statusEl.textContent = 'Playing answer...';
             responseAudio.onended = () => {
               statusEl.textContent = 'Ask another question!';
               URL.revokeObjectURL(audioUrl);
@@ -2958,14 +2963,16 @@
             throw new Error('TTS failed');
           }
         } catch (ttsErr) {
-          // Fallback to browser TTS if backend fails
-          console.log('Backend TTS failed, using browser TTS:', ttsErr);
+          console.log('TTS failed, using browser voice:', ttsErr);
           if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(answer);
             utterance.rate = 1.05;
             utterance.onend = () => { statusEl.textContent = 'Ask another question!'; };
             window.speechSynthesis.speak(utterance);
+            statusEl.textContent = 'Playing answer...';
+          } else {
+            statusEl.textContent = answer;
           }
         }
       } catch (err) {
@@ -4346,7 +4353,7 @@
           const data = await response.json();
           currentJobId = data.job_id;
           console.log('Backend job started:', currentJobId);
-          document.getElementById('generating-status').textContent = 'Generating with Gamma AI...';
+          document.getElementById('generating-status').textContent = 'Generating slides...';
           startGenerationPolling(config.count);
           return;
         }
@@ -4808,7 +4815,7 @@
           } else if (s.text) {
             body = s.text;
           } else if (s.status === 'complete') {
-            body = '✓ Generated by Gamma AI';
+            body = '✓ Generated by AI Radar';
           } else {
             body = 'Processing...';
           }
@@ -4939,7 +4946,8 @@
       // LinkedIn link - use actual posted URL
       let linkedinUrl = result.linkedin_url || status.linkedin_post_url || '';
       if (!linkedinUrl) {
-        linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(selectedArticle.link || '')}`;
+        const articleUrl = selectedArticle.url || selectedArticle.link || '';
+        linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(articleUrl)}`;
       }
       document.getElementById('linkedin-link').href = linkedinUrl;
 
@@ -4997,12 +5005,11 @@
         }
       }
 
-      // Fallback: demo mode
-      console.log('Demo mode: simulating post');
-      setTimeout(() => {
-        showLoading(false);
-        showSuccessModal();
-      }, 2000);
+      // Fallback: open LinkedIn share dialog directly
+      showLoading(false);
+      const articleUrl = selectedArticle?.url || selectedArticle?.link || '';
+      const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(articleUrl)}`;
+      window.open(shareUrl, '_blank');
     }
 
     function showSuccessModal(linkedinUrl = 'https://linkedin.com/feed') {
