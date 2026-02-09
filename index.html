@@ -2183,28 +2183,16 @@
           <div class="name">NewsData</div>
           <div class="count">-</div>
         </div>
-        <div class="source-btn" data-source="sheets" onclick="toggleSource('sheets')">
-          <div class="checkmark">✓</div>
-          <div class="icon"><img src="assets/sheets.png" alt="Sheets"></div>
-          <div class="name">Sheets</div>
-          <div class="count">-</div>
-        </div>
         <div class="source-btn" data-source="perplexity" onclick="toggleSource('perplexity')">
           <div class="checkmark">✓</div>
           <div class="icon"><img src="assets/perplexity.png" alt="Perplexity"></div>
           <div class="name">Perplexity</div>
           <div class="count">-</div>
         </div>
-        <div class="source-btn" data-source="feedly" onclick="toggleSource('feedly')">
+        <div class="source-btn" data-source="grok" onclick="toggleSource('grok')">
           <div class="checkmark">✓</div>
-          <div class="icon"><img src="assets/feedly.png" alt="Feedly"></div>
-          <div class="name">Feedly</div>
-          <div class="count">-</div>
-        </div>
-        <div class="source-btn" data-source="evernote" onclick="toggleSource('evernote')">
-          <div class="checkmark">✓</div>
-          <div class="icon"><img src="assets/evernote.png" alt="Evernote"></div>
-          <div class="name">Evernote</div>
+          <div class="icon"><img src="logos/grok.png" alt="Grok"></div>
+          <div class="name">Grok</div>
           <div class="count">-</div>
         </div>
       </div>
@@ -2212,6 +2200,7 @@
       <button class="fetch-all-btn" onclick="fetchAllSources()">
         FETCH ALL SOURCES
       </button>
+
     </div>
 
     <!-- SCREEN 2: AI SCORING ANIMATION -->
@@ -2660,15 +2649,12 @@
     const API_BASE = window.location.hostname === 'localhost'
       ? 'http://localhost:5050'
       : PRODUCTION_API;
-    const GOOGLE_SHEETS_ID = '11a-_IWhljPJHeKV8vdke-JiLmm_KCq-bedSceKB0kZI';
-    const GOOGLE_SHEETS_GID = '5770604';
-    const GOOGLE_SHEETS_CSV_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/export?format=csv&gid=${GOOGLE_SHEETS_GID}`;
-    // Use CORS proxy for browser access
+    // Use CORS proxy for browser access (needed for API calls from deployed site)
     const CORS_PROXY = 'https://corsproxy.io/?';
-    const GOOGLE_SHEETS_URL = CORS_PROXY + encodeURIComponent(GOOGLE_SHEETS_CSV_URL);
 
     // OpenAI TTS for audio summaries - uses backend proxy for security
     const OPENAI_API_KEY = null; // Moved to backend
+
     let isAudioPlaying = false;
     let cachedAudioUrl = null;
 
@@ -2908,7 +2894,6 @@
     let selectedLength = 'medium';
     let selectedSources = new Set();
     let selectedTopic = 'artificial intelligence';
-    let sheetsData = null; // Cache for Google Sheets data
 
     // Global topic keywords for learning and display
     const topicKeywords = ['AI', 'GPT', 'OpenAI', 'Google', 'Microsoft', 'Apple', 'Tesla', 'Crypto', 'Startup', 'Enterprise', 'Cloud', 'Data', 'Robot', 'Quantum', 'Meta', 'Amazon', 'ChatGPT', 'Gemini', 'Claude', 'Machine Learning', 'Deep Learning', 'Neural', 'Nvidia', 'Anthropic'];
@@ -3075,84 +3060,6 @@
       return result;
     }
 
-    async function fetchGoogleSheets() {
-      try {
-        console.log('Fetching Google Sheets from:', GOOGLE_SHEETS_URL);
-        const response = await fetch(GOOGLE_SHEETS_URL);
-        console.log('Response status:', response.status);
-
-        if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
-
-        const csvText = await response.text();
-        console.log('CSV length:', csvText.length, 'chars');
-        console.log('First 200 chars:', csvText.substring(0, 200));
-
-        const rows = parseCSV(csvText);
-        console.log('Parsed rows:', rows.length);
-
-        // Log headers to see column names
-        console.log('Available columns:', Object.keys(rows[0] || {}));
-
-        // Transform to article format
-        const allArticles = rows.map((row, idx) => {
-          // Try different possible column names for word count
-          const wordCount = parseInt(row['WORDS']) || parseInt(row['WORD COUNT']) || parseInt(row['Word Count']) || parseInt(row['Words']) || 0;
-          return {
-          id: `sheets-${idx}-${Date.now()}`,
-          title: row['TITLE'] || 'Untitled',
-          summary: row['GPT SAYS'] || row['CLAUDE SAYS'] || 'No summary available',
-          source: row['SOURCE'] || 'Unknown',
-          sourceType: 'sheets',
-          link: row['LINK'] || '',
-          date: row['DATE'] || row['DATE ADDED'] || 'Today',
-          image: null,
-          words: wordCount,
-          avgScore: parseFloat(row['AVG']) || 0,
-          pages: Math.ceil((parseFloat(row['AVG']) || 50) / 10),
-          scores: {
-            gpt: parseInt(row['GPT']) || 0,
-            claude: parseInt(row['CLAUDE']) || 0,
-            gemini: parseInt(row['GEMINI']) || 0,
-            grok: parseInt(row['GROK']) || 0,
-            pplx: parseInt(row['PPLX']) || 0
-          },
-          rationales: {
-            gpt: row['GPT SAYS'] || '',
-            claude: row['CLAUDE SAYS'] || '',
-            gemini: row['GEMINI SAYS'] || '',
-            grok: row['GROK SAYS'] || '',
-            pplx: row['PPLX SAYS'] || ''
-          },
-          status: row['STATUS'] || '',
-          gammaUrl: row['GAMMA URL'] || '',
-          category: row['CATEGORY'] || ''
-        };
-        });
-
-        // Log word counts before filtering
-        console.log('Word counts:', allArticles.map(a => ({ title: a.title.substring(0, 30), words: a.words })));
-
-        // Filter out articles under 500 words
-        const articles = allArticles.filter(a => a.words >= 500);
-        console.log(`Filtered: ${allArticles.length} total, ${articles.length} with 500+ words`);
-
-        // If no articles pass filter, show all (fallback) but warn
-        if (articles.length === 0 && allArticles.length > 0) {
-          console.warn('No articles with 500+ words found! Check WORDS column in spreadsheet.');
-        }
-
-        console.log('Transformed articles:', articles.length);
-        if (articles.length > 0) {
-          console.log('First article:', articles[0]);
-        }
-
-        return articles;
-      } catch (err) {
-        console.error('Google Sheets fetch error:', err);
-        showToast('Error loading sheets: ' + err.message);
-        return [];
-      }
-    }
 
     // ============================================
     // SOURCE SELECTION
@@ -3177,7 +3084,7 @@
       selectedTopic = topic;
 
       // Show loading state on all source buttons
-      const sources = ['newsapi', 'newsdata', 'sheets', 'perplexity', 'feedly', 'evernote'];
+      const sources = ['newsapi', 'newsdata', 'perplexity', 'grok'];
       sources.forEach(source => {
         const btn = document.querySelector(`.source-btn[data-source="${source}"]`);
         if (btn) {
@@ -3194,25 +3101,6 @@
 
     async function fetchSourceCount(source, topic) {
       const btn = document.querySelector(`.source-btn[data-source="${source}"]`);
-
-      // Special handling for Google Sheets - fetch real count
-      if (source === 'sheets') {
-        try {
-          if (!sheetsData) {
-            sheetsData = await fetchGoogleSheets();
-          }
-          const filtered = sheetsData.filter(a => {
-            const searchText = `${a.title} ${a.category}`.toLowerCase();
-            return searchText.includes(topic.toLowerCase()) || topic === 'artificial intelligence';
-          });
-          btn.querySelector('.count').textContent = filtered.length;
-          return;
-        } catch (err) {
-          console.error('Sheets count error:', err);
-          btn.querySelector('.count').textContent = '?';
-          return;
-        }
-      }
 
       try {
         // Try real backend
@@ -3272,68 +3160,123 @@
       const btn = document.querySelector(`.source-btn[data-source="${source}"]`);
       btn.classList.add('fetching');
 
-      // Special handling for Google Sheets
-      if (source === 'sheets') {
-        try {
-          console.log('Fetching from Sheets...');
-          const sheetsArticles = await fetchGoogleSheets();
-          console.log('Got articles from sheets:', sheetsArticles.length);
+      // API calls through Vercel serverless routes (no CORS issues)
+      try {
+        let directArticles = [];
 
-          // Show ALL articles from sheets (no topic filtering for now)
-          articles = [...articles, ...sheetsArticles];
+        if (source === 'newsapi') {
+          const resp = await fetch(`/api/newsapi?q=${encodeURIComponent(selectedTopic)}&pageSize=10`);
+          const data = await resp.json();
+          if (data.articles) {
+            directArticles = data.articles.map(a => ({
+              id: Date.now() + Math.random(),
+              title: a.title,
+              summary: a.description || '',
+              url: a.url,
+              image: a.urlToImage,
+              source: 'newsapi',
+              publishedAt: a.publishedAt,
+              date: formatDate(a.publishedAt),
+              avgScore: (70 + Math.random() * 25).toFixed(1)
+            }));
+          }
+        } else if (source === 'newsdata') {
+          const resp = await fetch(`/api/newsdata?q=${encodeURIComponent(selectedTopic)}&language=en`);
+          const data = await resp.json();
+          if (data.results) {
+            directArticles = data.results.map(a => ({
+              id: Date.now() + Math.random(),
+              title: a.title,
+              summary: a.description || '',
+              url: a.link,
+              image: a.image_url,
+              source: 'newsdata',
+              publishedAt: a.pubDate,
+              date: formatDate(a.pubDate),
+              avgScore: (70 + Math.random() * 25).toFixed(1)
+            }));
+          }
+        } else if (source === 'perplexity') {
+          const resp = await fetch('/api/perplexity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'sonar',
+              messages: [{
+                role: 'user',
+                content: `Find 5 recent news articles about ${selectedTopic}. Return JSON array with objects having: title, summary, url, publishedAt (ISO date). Only return the JSON array, no other text.`
+              }]
+            })
+          });
+          const data = await resp.json();
+          if (data.choices?.[0]?.message?.content) {
+            try {
+              const parsed = JSON.parse(data.choices[0].message.content);
+              directArticles = parsed.map(a => ({
+                id: Date.now() + Math.random(),
+                title: a.title,
+                summary: a.summary || '',
+                url: a.url,
+                source: 'perplexity',
+                publishedAt: a.publishedAt,
+                date: formatDate(a.publishedAt || new Date().toISOString()),
+                avgScore: (70 + Math.random() * 25).toFixed(1)
+              }));
+            } catch (e) { console.log('Perplexity parse error:', e); }
+          }
+        } else if (source === 'grok') {
+          const resp = await fetch('/api/grok', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'grok-3-mini',
+              messages: [{
+                role: 'user',
+                content: `Find 5 recent news articles about ${selectedTopic}. Return JSON array with objects having: title, summary, url, publishedAt (ISO date). Only return the JSON array, no other text.`
+              }]
+            })
+          });
+          const data = await resp.json();
+          if (data.choices?.[0]?.message?.content) {
+            try {
+              let content = data.choices[0].message.content;
+              // Strip markdown code fences if present
+              content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+              const parsed = JSON.parse(content);
+              directArticles = parsed.map(a => ({
+                id: Date.now() + Math.random(),
+                title: a.title,
+                summary: a.summary || '',
+                url: a.url,
+                source: 'grok',
+                publishedAt: a.publishedAt,
+                date: formatDate(a.publishedAt || new Date().toISOString()),
+                avgScore: (70 + Math.random() * 25).toFixed(1)
+              }));
+            } catch (e) { console.log('Grok parse error:', e); }
+          }
+        }
+
+        if (directArticles.length > 0) {
+          articles = [...articles, ...directArticles];
           btn.classList.remove('fetching');
           btn.classList.add('done');
-          btn.querySelector('.count').textContent = sheetsArticles.length;
-
-          console.log(`Loaded ${sheetsArticles.length} articles from Google Sheets`);
-          showToast(`Loaded ${sheetsArticles.length} articles from Sheets`);
-          return sheetsArticles.length;
-        } catch (err) {
-          console.error('Google Sheets error:', err);
-          showToast('Error: ' + err.message);
-          btn.classList.remove('fetching');
-          btn.querySelector('.count').textContent = '0';
-          return 0;
+          btn.querySelector('.count').textContent = directArticles.length;
+          console.log(`Got ${directArticles.length} articles directly from ${source}`);
+          return directArticles.length;
         }
-      }
-
-      try {
-        // Try to connect to real backend
-        const response = await fetch(`${API_BASE}/api/articles?source=${source}&topic=${encodeURIComponent(selectedTopic)}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (!response.ok) throw new Error('API error');
-
-        const data = await response.json();
-        const newArticles = (data.articles || []).map(a => ({
-          ...a,
-          id: a.id || Date.now() + Math.random(),
-          source: source,
-          avgScore: a.avgScore || ((a.scores?.gpt + a.scores?.claude + a.scores?.gemini + a.scores?.grok + a.scores?.pplx) / 5).toFixed(1),
-          date: a.publishedAt ? formatDate(a.publishedAt) : 'Today',
-          pages: a.pages || Math.floor(Math.random() * 5) + 2
-        }));
-
-        articles = [...articles, ...newArticles];
-        btn.classList.remove('fetching');
-        btn.classList.add('done');
-        btn.querySelector('.count').textContent = newArticles.length;
-
-        return newArticles.length;
       } catch (err) {
-        console.log(`Backend not available for ${source}, using demo data`);
-        btn.classList.remove('fetching');
-
-        // Demo mode: add fake articles
-        const fakeArticles = generateFakeArticles(source, 5);
-        articles = [...articles, ...fakeArticles];
-        btn.querySelector('.count').textContent = fakeArticles.length;
-        btn.classList.add('done');
-
-        return fakeArticles.length;
+        console.log(`API call failed for ${source}:`, err);
       }
+
+      // Fallback to demo data
+      btn.classList.remove('fetching');
+      const fakeArticles = generateFakeArticles(source, 5);
+      articles = [...articles, ...fakeArticles];
+      btn.querySelector('.count').textContent = fakeArticles.length;
+      btn.classList.add('done');
+
+      return fakeArticles.length;
     }
 
     function formatDate(dateStr) {
@@ -3352,8 +3295,7 @@
       btn.disabled = true;
       btn.textContent = 'FETCHING...';
 
-      // Use selected sources or all if none selected
-      const allSources = ['newsapi', 'newsdata', 'sheets', 'perplexity', 'feedly', 'evernote'];
+      const allSources = ['newsapi', 'newsdata', 'perplexity', 'grok'];
       const sources = selectedSources.size > 0 ? Array.from(selectedSources) : allSources;
 
       for (const source of sources) {
@@ -4646,25 +4588,23 @@
       populateSlides(selectedArticle, selectedLength, slides);
 
       // Populate source info with logo
-      const sourceType = selectedArticle.sourceType || selectedArticle.source?.toLowerCase() || 'sheets';
+      const sourceType = selectedArticle.sourceType || selectedArticle.source?.toLowerCase() || 'newsapi';
       const sourceLogos = {
         'newsapi': 'assets/newsapi.png',
         'newsdata': 'assets/newsdata.png',
-        'sheets': 'assets/sheets.png',
         'perplexity': 'assets/perplexity.png',
-        'feedly': 'assets/feedly.png',
-        'evernote': 'assets/evernote.png'
+        'grok': 'logos/grok.png',
+        'feedly': 'assets/feedly.png'
       };
       const sourceNames = {
         'newsapi': 'NewsAPI',
         'newsdata': 'NewsData',
-        'sheets': 'Google Sheets',
         'perplexity': 'Perplexity',
-        'feedly': 'Feedly',
-        'evernote': 'Evernote'
+        'grok': 'Grok',
+        'feedly': 'Feedly'
       };
 
-      document.getElementById('results-source-logo').src = sourceLogos[sourceType] || sourceLogos['sheets'];
+      document.getElementById('results-source-logo').src = sourceLogos[sourceType] || sourceLogos['newsapi'];
       document.getElementById('results-source-name').textContent = sourceNames[sourceType] || selectedArticle.source || 'Unknown Source';
       document.getElementById('results-article-title').textContent = selectedArticle.title || 'Untitled Article';
 
