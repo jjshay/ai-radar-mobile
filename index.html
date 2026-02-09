@@ -2662,6 +2662,14 @@
       <!-- Step Description -->
       <p class="gen-step-description" id="gen-step-description">Analyzing article content...</p>
 
+      <!-- Audio Summary -->
+      <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <button id="audio-btn" onclick="toggleAudioSummary()" style="background: var(--gold); border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--bg-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <span id="audio-icon">🎧</span> <span id="audio-text">Listen</span>
+        </button>
+        <span id="audio-status" style="font-size: 11px; color: var(--text-muted);"></span>
+      </div>
+      <audio id="summary-audio" style="display: none;"></audio>
 
       <!-- Progress -->
       <div style="width: 100%; max-width: 250px;">
@@ -2704,6 +2712,127 @@
     // Use CORS proxy for browser access (needed for API calls from deployed site)
     const CORS_PROXY = 'https://corsproxy.io/?';
 
+    // Audio summary state
+    let isAudioPlaying = false;
+    let cachedAudioUrl = null;
+
+    // Inspiring quotes for audio intros
+    const inspiringQuotes = [
+      "As Maya Angelou said, 'There is no greater agony than bearing an untold story inside you.'",
+      "In the words of Steve Jobs, 'Innovation distinguishes between a leader and a follower.'",
+      "Oscar Wilde reminded us, 'Be yourself; everyone else is already taken.'",
+      "As Albert Einstein said, 'Imagination is more important than knowledge.'",
+      "In the words of Rumi, 'What you seek is seeking you.'",
+      "Marie Curie said, 'Nothing in life is to be feared, it is only to be understood.'",
+      "As Walt Disney said, 'The way to get started is to quit talking and begin doing.'",
+      "Leonardo da Vinci wrote, 'Learning never exhausts the mind.'",
+      "As Nelson Mandela said, 'It always seems impossible until it's done.'",
+      "In the words of Coco Chanel, 'In order to be irreplaceable, one must always be different.'"
+    ];
+
+    // Audio summary - uses backend proxy for TTS
+    async function generateAudioSummary(article) {
+      const statusEl = document.getElementById('audio-status');
+      const btnEl = document.getElementById('audio-btn');
+      const iconEl = document.getElementById('audio-icon');
+      const textEl = document.getElementById('audio-text');
+      const audioEl = document.getElementById('summary-audio');
+
+      if (!article) {
+        statusEl.textContent = 'No article selected';
+        return;
+      }
+
+      statusEl.textContent = 'Generating summary...';
+      btnEl.disabled = true;
+
+      try {
+        const quote = inspiringQuotes[Math.floor(Math.random() * inspiringQuotes.length)];
+        const intro = 'This AI Radar summary is brought to you by JJ Shay at jjshay.com — where you can find other projects and over 70 free AI reports to download.';
+        const fullSummary = intro + ' ... ' + (article.summary || article.description || '');
+        const response = await fetch(`${API_BASE}/audio-summary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: article.title,
+            source: article.source || '',
+            summary: fullSummary,
+            quote: quote
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to generate audio');
+
+        statusEl.textContent = 'Loading audio...';
+        const audioBlob = await response.blob();
+        cachedAudioUrl = URL.createObjectURL(audioBlob);
+
+        audioEl.src = cachedAudioUrl;
+        audioEl.play();
+        isAudioPlaying = true;
+
+        iconEl.textContent = '⏸️';
+        textEl.textContent = 'Pause';
+        statusEl.textContent = 'Playing...';
+
+        audioEl.onended = () => {
+          isAudioPlaying = false;
+          iconEl.textContent = '🎧';
+          textEl.textContent = 'Replay';
+          statusEl.textContent = '';
+        };
+
+      } catch (error) {
+        console.error('Audio generation error:', error);
+        statusEl.textContent = 'Audio unavailable';
+      }
+
+      btnEl.disabled = false;
+    }
+
+    function toggleAudioSummary() {
+      const audioEl = document.getElementById('summary-audio');
+      const iconEl = document.getElementById('audio-icon');
+      const textEl = document.getElementById('audio-text');
+      const statusEl = document.getElementById('audio-status');
+
+      if (!cachedAudioUrl) {
+        generateAudioSummary(selectedArticle);
+      } else if (isAudioPlaying) {
+        audioEl.pause();
+        isAudioPlaying = false;
+        iconEl.textContent = '▶️';
+        textEl.textContent = 'Resume';
+        statusEl.textContent = 'Paused';
+      } else {
+        audioEl.play();
+        isAudioPlaying = true;
+        iconEl.textContent = '⏸️';
+        textEl.textContent = 'Pause';
+        statusEl.textContent = 'Playing...';
+      }
+    }
+
+    function resetAudioState() {
+      const iconEl = document.getElementById('audio-icon');
+      const textEl = document.getElementById('audio-text');
+      const statusEl = document.getElementById('audio-status');
+      const audioEl = document.getElementById('summary-audio');
+
+      if (audioEl) {
+        audioEl.pause();
+        audioEl.src = '';
+      }
+      if (cachedAudioUrl) {
+        URL.revokeObjectURL(cachedAudioUrl);
+        cachedAudioUrl = null;
+      }
+      isAudioPlaying = false;
+
+      if (iconEl) iconEl.textContent = '🎧';
+      if (textEl) textEl.textContent = 'Listen';
+      if (statusEl) statusEl.textContent = '';
+    }
 
     let articles = [];
     let favorites = JSON.parse(localStorage.getItem('ai-radar-favorites') || '[]');
@@ -2952,6 +3081,12 @@
     // SCREEN NAVIGATION
     // ============================================
     function showScreen(screenId) {
+      // Reset audio when leaving generating screen
+      const currentScreen = document.querySelector('.screen.active');
+      if (currentScreen && currentScreen.id === 'screen-generating' && screenId !== 'generating') {
+        resetAudioState();
+      }
+
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById('screen-' + screenId).classList.add('active');
 
@@ -2959,6 +3094,8 @@
         renderCards();
       } else if (screenId === 'favorites') {
         renderFavorites();
+      } else if (screenId === 'generating') {
+        resetAudioState();
       }
     }
 
@@ -4037,6 +4174,15 @@
 
       // Show generating screen
       showScreen('generating');
+
+      // Lazy load audio summary after a few seconds
+      setTimeout(() => {
+        if (selectedArticle && !isAudioPlaying) {
+          console.log('Lazy loading audio summary...');
+          document.getElementById('audio-status').textContent = 'Preparing audio...';
+          generateAudioSummary(selectedArticle);
+        }
+      }, 3000);
 
       // Set up single card display
       document.getElementById('step-num').textContent = '1';
