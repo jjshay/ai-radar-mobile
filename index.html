@@ -1617,21 +1617,25 @@
     .post-final-btn {
       width: 100%;
       padding: 20px;
-      background: linear-gradient(135deg, var(--blue), #1d4ed8);
+      background: var(--gold);
       border: none;
       border-radius: 16px;
       font-size: 18px;
       font-weight: 700;
-      color: white;
+      color: var(--bg-primary);
       cursor: pointer;
       margin-bottom: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
+      transition: background 0.3s, color 0.3s;
     }
 
+    .post-final-btn:hover,
     .post-final-btn:active {
+      background: var(--linkedin-blue);
+      color: white;
       transform: scale(0.97);
     }
 
@@ -1901,13 +1905,18 @@
     .gamma-logo-box {
       background: var(--bg-card);
       border: 1px solid var(--gold);
-      padding: 8px 16px;
-      border-radius: 10px;
+      padding: 12px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
       box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
       animation: gamma-glow 2s ease-in-out infinite;
+    }
+
+    .gamma-logo-box img {
+      width: 48px;
+      height: 48px;
     }
 
     @keyframes gamma-glow {
@@ -1915,16 +1924,19 @@
       50% { box-shadow: 0 0 50px rgba(212, 175, 55, 0.5); }
     }
 
-    .gamma-logo-box svg {
-      width: 20px;
-      height: 20px;
-      fill: white;
-    }
-
-    .gamma-logo-box span {
-      font-size: 14px;
-      font-weight: 700;
-      color: white;
+    .gen-article-title {
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      max-width: 280px;
+      margin: 8px auto 0;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
     }
 
     /* Card Counter */
@@ -2520,7 +2532,7 @@
         <div class="action-buttons">
           <a href="#" class="action-btn gamma" id="gamma-link" target="_blank">
             <span class="btn-icon">
-              <img src="logos/gamma.png" alt="AI Radar" style="width: 28px; height: 28px; border-radius: 6px;">
+              <img src="assets/logo-white.png" alt="AI Radar" style="width: 28px; height: 28px; border-radius: 6px;">
             </span>
             <span class="btn-label">Slides</span>
           </a>
@@ -2643,13 +2655,13 @@
       <!-- AI Radar Logo -->
       <div class="gamma-highlight">
         <div class="gamma-logo-box">
-          <img src="assets/logo-white.png" alt="AI Radar" style="width: 24px; height: 24px;">
-          <span>AI Radar</span>
+          <img src="assets/logo-white.png" alt="AI Radar">
         </div>
       </div>
 
       <!-- Status -->
-      <p id="generating-status" style="color: var(--text-muted); font-size: 12px; margin: 10px 0;">Creating carousel...</p>
+      <p id="generating-status" style="color: var(--text-muted); font-size: 12px; margin: 8px 0 4px;">Creating carousel...</p>
+      <p class="gen-article-title" id="gen-article-title"></p>
 
       <!-- Single Card with Step Number -->
       <div class="generation-cards">
@@ -2663,9 +2675,9 @@
       <p class="gen-step-description" id="gen-step-description">Analyzing article content...</p>
 
       <!-- Audio Summary -->
-      <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <button id="audio-btn" onclick="toggleAudioSummary()" style="background: var(--gold); border: none; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--bg-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
-          <span id="audio-icon">🎧</span> <span id="audio-text">Listen</span>
+      <div style="margin: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <button id="audio-btn" onclick="toggleAudioSummary()" style="background: var(--gold); border: none; padding: 10px 24px; border-radius: 24px; font-size: 14px; font-weight: 700; color: var(--bg-primary); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 12px rgba(212,175,55,0.3);">
+          <span id="audio-icon">🎧</span> <span id="audio-text">Listen to Summary</span>
         </button>
         <span id="audio-status" style="font-size: 11px; color: var(--text-muted);"></span>
       </div>
@@ -4189,6 +4201,7 @@
       document.getElementById('step-total').textContent = `of ${config.count}`;
       document.getElementById('gen-step-description').textContent = config.steps[0]?.step || 'Starting...';
       document.getElementById('generating-status').textContent = 'Creating carousel...';
+      document.getElementById('gen-article-title').textContent = selectedArticle?.title || '';
 
       // Reset progress
       document.getElementById('gen-progress-fill').style.width = '0%';
@@ -4876,8 +4889,11 @@
 
       // Fallback: open LinkedIn share dialog directly
       showLoading(false);
-      const articleUrl = selectedArticle?.url || selectedArticle?.link || '';
-      const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(articleUrl)}`;
+      const gammaLink = document.getElementById('gamma-link');
+      const shareTarget = (gammaLink && gammaLink.href && gammaLink.href !== '#')
+        ? gammaLink.href
+        : (selectedArticle?.url || selectedArticle?.link || window.location.href);
+      const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareTarget)}`;
       window.open(shareUrl, '_blank');
     }
 
