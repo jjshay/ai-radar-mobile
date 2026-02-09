@@ -3165,7 +3165,7 @@
         let directArticles = [];
 
         if (source === 'newsapi') {
-          const resp = await fetch(`/api/newsapi?q=${encodeURIComponent(selectedTopic)}&pageSize=10`);
+          const resp = await fetch(`/api/newsapi?q=${encodeURIComponent(selectedTopic)}&pageSize=20`);
           const data = await resp.json();
           if (data.articles) {
             directArticles = data.articles.map(a => ({
@@ -3204,7 +3204,7 @@
               model: 'sonar',
               messages: [{
                 role: 'user',
-                content: `Find 5 recent news articles about ${selectedTopic}. Return JSON array with objects having: title, summary, url, publishedAt (ISO date). Only return the JSON array, no other text.`
+                content: `Find 15 recent news articles about ${selectedTopic}. Return JSON array with objects having: title, summary, url, publishedAt (ISO date). Only return the JSON array, no other text.`
               }]
             })
           });
@@ -3232,7 +3232,7 @@
               model: 'grok-3-mini',
               messages: [{
                 role: 'user',
-                content: `Find 5 recent news articles about ${selectedTopic}. Return JSON array with objects having: title, summary, url, publishedAt (ISO date). Only return the JSON array, no other text.`
+                content: `Find 15 recent news articles about ${selectedTopic}. Return JSON array with objects having: title, summary, url, publishedAt (ISO date). Only return the JSON array, no other text.`
               }]
             })
           });
