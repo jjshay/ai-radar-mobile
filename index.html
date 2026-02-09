@@ -2828,11 +2828,20 @@
     }
 
     // ============================================
-    // VOICE CHAT - Interactive Q&A
+    // VOICE CHAT - Interactive Q&A (Browser Speech APIs + Grok)
     // ============================================
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let isRecording = false;
+    let isListening = false;
+    let speechRecognition = null;
+
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return null;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      return recognition;
+    }
 
     async function toggleVoiceChat() {
       const micBtn = document.getElementById('mic-btn');
@@ -2840,91 +2849,109 @@
       const micText = document.getElementById('mic-text');
       const statusEl = document.getElementById('audio-status');
 
-      if (isRecording) {
-        // Stop recording
-        mediaRecorder.stop();
-        isRecording = false;
+      if (isListening) {
+        // Stop listening
+        if (speechRecognition) speechRecognition.stop();
+        isListening = false;
         micIcon.textContent = '🎤';
         micText.textContent = 'Ask';
         micBtn.style.background = 'var(--accent)';
-      } else {
-        // Start recording
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          mediaRecorder = new MediaRecorder(stream);
-          audioChunks = [];
-
-          mediaRecorder.ondataavailable = (e) => {
-            audioChunks.push(e.data);
-          };
-
-          mediaRecorder.onstop = async () => {
-            // Stop all tracks
-            stream.getTracks().forEach(track => track.stop());
-
-            // Process recording
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            await sendVoiceQuestion(audioBlob);
-          };
-
-          mediaRecorder.start();
-          isRecording = true;
-          micIcon.textContent = '⏹️';
-          micText.textContent = 'Stop';
-          micBtn.style.background = '#e74c3c';
-          statusEl.textContent = 'Listening...';
-        } catch (err) {
-          console.error('Mic error:', err);
-          statusEl.textContent = 'Mic access denied';
-        }
+        return;
       }
+
+      // Start listening
+      speechRecognition = initSpeechRecognition();
+      if (!speechRecognition) {
+        statusEl.textContent = 'Speech not supported in this browser';
+        return;
+      }
+
+      isListening = true;
+      micIcon.textContent = '⏹️';
+      micText.textContent = 'Stop';
+      micBtn.style.background = '#e74c3c';
+      statusEl.textContent = 'Listening...';
+
+      speechRecognition.onresult = async (event) => {
+        const question = event.results[0][0].transcript;
+        isListening = false;
+        micIcon.textContent = '🎤';
+        micText.textContent = 'Ask';
+        micBtn.style.background = 'var(--accent)';
+        statusEl.textContent = `"${question.substring(0, 40)}${question.length > 40 ? '...' : ''}"`;
+        await answerQuestion(question);
+      };
+
+      speechRecognition.onerror = (event) => {
+        console.error('Speech error:', event.error);
+        isListening = false;
+        micIcon.textContent = '🎤';
+        micText.textContent = 'Ask';
+        micBtn.style.background = 'var(--accent)';
+        statusEl.textContent = event.error === 'not-allowed' ? 'Mic access denied' : 'Could not hear you, try again';
+      };
+
+      speechRecognition.onend = () => {
+        if (isListening) {
+          isListening = false;
+          micIcon.textContent = '🎤';
+          micText.textContent = 'Ask';
+          micBtn.style.background = 'var(--accent)';
+        }
+      };
+
+      speechRecognition.start();
     }
 
-    async function sendVoiceQuestion(audioBlob) {
+    async function answerQuestion(question) {
       const statusEl = document.getElementById('audio-status');
-      const responseAudio = document.getElementById('voice-response-audio');
-
-      statusEl.textContent = 'Processing...';
 
       try {
-        // Convert blob to base64
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
+        statusEl.textContent = 'Thinking...';
 
-        reader.onloadend = async () => {
-          const base64Audio = reader.result.split(',')[1];
+        const articleContext = selectedArticle
+          ? `Article: "${selectedArticle.title}"\nSummary: ${(selectedArticle.summary || '').substring(0, 500)}\nSource: ${selectedArticle.source || 'unknown'}`
+          : 'No specific article selected.';
 
-          const response = await fetch(`${API_BASE}/voice-chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              audio: base64Audio,
-              title: selectedArticle?.title || '',
-              summary: selectedArticle?.summary || selectedArticle?.description || ''
-            })
-          });
+        const resp = await fetch('/api/grok', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'grok-3-mini',
+            messages: [{
+              role: 'system',
+              content: 'You are a helpful AI news analyst. Answer questions about the article concisely in 2-3 sentences. Be direct and insightful.'
+            }, {
+              role: 'user',
+              content: `${articleContext}\n\nQuestion: ${question}`
+            }],
+            temperature: 0.5
+          })
+        });
 
-          if (!response.ok) throw new Error('Voice chat failed');
+        const data = await resp.json();
+        const answer = data.choices?.[0]?.message?.content || 'Sorry, I could not generate an answer.';
 
-          const data = await response.json();
-          statusEl.textContent = `You: "${data.question.substring(0, 30)}..."`;
+        statusEl.textContent = answer;
 
-          // Play response audio
-          const audioBytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
-          const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
-          const audioUrl = URL.createObjectURL(blob);
-
-          responseAudio.src = audioUrl;
-          responseAudio.play();
-
-          responseAudio.onended = () => {
+        // Speak the answer using browser TTS
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(answer);
+          utterance.rate = 1.05;
+          utterance.pitch = 1;
+          // Pick a good voice if available
+          const voices = window.speechSynthesis.getVoices();
+          const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google') || v.name.includes('Natural'));
+          if (preferred) utterance.voice = preferred;
+          utterance.onend = () => {
             statusEl.textContent = 'Ask another question!';
-            URL.revokeObjectURL(audioUrl);
           };
-        };
+          window.speechSynthesis.speak(utterance);
+        }
       } catch (err) {
         console.error('Voice chat error:', err);
-        statusEl.textContent = 'Could not process question';
+        statusEl.textContent = 'Could not get answer, try again';
       }
     }
 
