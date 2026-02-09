@@ -1899,19 +1899,20 @@
     }
 
     .gamma-logo-box {
-      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      background: var(--bg-card);
+      border: 1px solid var(--gold);
       padding: 8px 16px;
       border-radius: 10px;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
       animation: gamma-glow 2s ease-in-out infinite;
     }
 
     @keyframes gamma-glow {
-      0%, 100% { box-shadow: 0 0 30px rgba(168, 85, 247, 0.4); }
-      50% { box-shadow: 0 0 50px rgba(168, 85, 247, 0.7); }
+      0%, 100% { box-shadow: 0 0 30px rgba(212, 175, 55, 0.3); }
+      50% { box-shadow: 0 0 50px rgba(212, 175, 55, 0.5); }
     }
 
     .gamma-logo-box svg {
@@ -2642,7 +2643,7 @@
       <!-- AI Radar Logo -->
       <div class="gamma-highlight">
         <div class="gamma-logo-box">
-          <img src="logos/gamma.png" alt="AI Radar" style="width: 24px; height: 24px; border-radius: 6px;">
+          <img src="assets/logo-white.png" alt="AI Radar" style="width: 24px; height: 24px;">
           <span>AI Radar</span>
         </div>
       </div>
