@@ -2935,18 +2935,13 @@
 
         statusEl.textContent = answer;
 
-        // Use the same OpenAI TTS voice as the audio summary
+        // Use OpenAI TTS for natural voice (same as audio summaries)
         try {
           statusEl.textContent = 'Speaking...';
-          const ttsResp = await fetch(`${API_BASE}/audio-summary`, {
+          const ttsResp = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: '',
-              source: '',
-              summary: answer,
-              quote: ''
-            })
+            body: JSON.stringify({ text: answer, voice: 'nova' })
           });
 
           if (ttsResp.ok) {
