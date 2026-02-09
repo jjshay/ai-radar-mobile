@@ -3832,15 +3832,11 @@
           showToast('Not interested 👎');
           break;
         case 'down':
-          // GO BACK - Return to source list
+          // SAVE FOR LATER
           exitY = window.innerHeight;
-          showToast('Back to sources');
-          card.style.transition = 'transform 0.3s ease';
-          card.style.transform = `translateY(${exitY}px)`;
-          setTimeout(() => {
-            showScreen('home');
-          }, 300);
-          return; // Don't continue to next card
+          addToSavedForLater(article);
+          showToast('Saved for later 📌');
+          break;
       }
 
       card.style.transition = 'transform 0.3s ease';
