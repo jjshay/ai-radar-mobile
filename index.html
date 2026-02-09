@@ -29,6 +29,8 @@
       --ai-grok: #ffffff;
       --ai-pplx: #8b5cf6;
 
+      --linkedin-blue: #0A66C2;
+
       --safe-top: env(safe-area-inset-top);
       --safe-bottom: env(safe-area-inset-bottom);
     }
@@ -83,41 +85,29 @@
 
     .logo-container {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 20px;
+      gap: 10px;
       margin-bottom: 50px;
     }
 
     .logo-icon {
-      width: 90px;
-      height: 90px;
+      width: 160px;
+      height: 160px;
       flex-shrink: 0;
     }
 
-    .logo-icon svg {
+    .logo-icon img {
       width: 100%;
       height: 100%;
-    }
-
-    .logo-text-group {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .logo-text {
-      font-size: 36px;
-      font-weight: 700;
-      color: white;
-      letter-spacing: 2px;
-      line-height: 1;
+      object-fit: contain;
     }
 
     .logo-tagline {
       font-size: 16px;
       color: white;
-      margin-top: 8px;
       letter-spacing: 1px;
+      text-align: center;
     }
 
     /* Source Buttons Grid */
@@ -166,12 +156,48 @@
     }
 
     .source-btn.fetching {
-      border-color: var(--gold);
-      animation: pulse-border 1.5s infinite;
+      border-color: var(--linkedin-blue);
+      background: conic-gradient(
+        var(--linkedin-blue) var(--fill-progress, 0%),
+        var(--gold) var(--fill-progress, 0%)
+      );
+      animation: fill-corners 2.5s ease-in-out forwards;
+    }
+
+    .source-btn.fetching .name,
+    .source-btn.fetching .count {
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    @keyframes fill-corners {
+      0% { --fill-progress: 0%; }
+      25% { --fill-progress: 25%; }
+      50% { --fill-progress: 50%; }
+      75% { --fill-progress: 75%; }
+      100% { --fill-progress: 100%; }
+    }
+
+    @property --fill-progress {
+      syntax: '<percentage>';
+      inherits: false;
+      initial-value: 0%;
     }
 
     .source-btn.done {
-      border-color: var(--green);
+      background: var(--linkedin-blue);
+      border-color: var(--linkedin-blue);
+      box-shadow: 0 0 20px rgba(10, 102, 194, 0.4);
+    }
+
+    .source-btn.done .name,
+    .source-btn.done .count {
+      color: #ffffff;
+    }
+
+    .source-btn.done .checkmark {
+      background: white;
+      color: var(--linkedin-blue);
     }
 
     .source-btn .checkmark {
@@ -200,6 +226,11 @@
     @keyframes pulse-border {
       0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
       50% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+    }
+
+    @keyframes pulse-text {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
 
     .source-btn .icon {
@@ -2166,20 +2197,9 @@
     <div id="screen-home" class="screen active">
       <div class="logo-container">
         <div class="logo-icon">
-          <svg viewBox="0 0 100 100" fill="none" stroke="white" stroke-width="2">
-            <circle cx="50" cy="50" r="47"/>
-            <circle cx="50" cy="50" r="41"/>
-            <circle cx="50" cy="50" r="35"/>
-            <circle cx="50" cy="50" r="26"/>
-            <path d="M32 68 L50 28 L68 68" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M38 58 L62 58" stroke-width="4" stroke-linecap="round"/>
-            <path d="M72 32 L72 68" stroke-width="4" stroke-linecap="round"/>
-          </svg>
+          <img src="assets/logo-white.png" alt="AI Radar">
         </div>
-        <div class="logo-text-group">
-          <div class="logo-text">AI RADAR</div>
-          <div class="logo-tagline">Intelligence Engine</div>
-        </div>
+        <div class="logo-tagline">Intelligence Engine</div>
       </div>
 
       <!-- Topic Dropdown - At Top -->
@@ -2907,13 +2927,14 @@
 
       try {
         statusEl.textContent = 'Thinking...';
+        statusEl.style.animation = 'pulse-text 1.2s ease-in-out infinite';
 
         const articleContext = selectedArticle
           ? `Article: "${selectedArticle.title}"\nSummary: ${(selectedArticle.summary || '').substring(0, 300)}\nSource: ${selectedArticle.source || 'unknown'}`
           : 'No specific article selected.';
 
         const grokCtrl = new AbortController();
-        const grokTimer = setTimeout(() => grokCtrl.abort(), 12000);
+        const grokTimer = setTimeout(() => grokCtrl.abort(), 25000);
         const resp = await fetch('/api/grok', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2936,6 +2957,7 @@
         const answer = data.choices?.[0]?.message?.content || 'Sorry, I could not generate an answer.';
 
         // Don't show text - just speak it
+        statusEl.style.animation = '';
         statusEl.textContent = 'Speaking...';
 
         try {
@@ -2977,7 +2999,12 @@
         }
       } catch (err) {
         console.error('Voice chat error:', err);
-        statusEl.textContent = 'Could not get answer, try again';
+        statusEl.style.animation = '';
+        if (err.name === 'AbortError') {
+          statusEl.textContent = 'Response took too long, try again';
+        } else {
+          statusEl.textContent = 'Could not get answer, try again';
+        }
       }
     }
 
