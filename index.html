@@ -520,6 +520,44 @@
       transform: scale(0.95);
     }
 
+    /* Sentiment Badges */
+    .sentiment-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 6px;
+    }
+    .sentiment-badge.positive { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .sentiment-badge.negative { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .sentiment-badge.neutral { background: rgba(156,163,175,0.15); color: #9ca3af; }
+    .sentiment-badge.mixed { background: rgba(234,179,8,0.15); color: #eab308; }
+
+    /* Article Tags */
+    .article-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+    .article-tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 8px;
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: #fff;
+    }
+    .article-tag.trending { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .article-tag.hot { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .article-tag.top-article { background: linear-gradient(135deg, #D4AF37, #a08520); }
+    .article-tag.breaking { background: linear-gradient(135deg, #8b5cf6, #7c3aed); animation: breakingPulse 2s ease-in-out infinite; }
+    .article-tag.viral { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+    .article-tag.must-read { background: linear-gradient(135deg, #10b981, #059669); }
+    .article-tag.deep-dive { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    @keyframes breakingPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
     /* AI Detail Popup */
     .ai-detail-popup {
       position: fixed;
@@ -3182,7 +3220,6 @@
               publishedAt: a.publishedAt,
               date: formatDate(a.publishedAt),
               words: text.split(/\s+/).filter(w => w).length,
-              avgScore: (70 + Math.random() * 25).toFixed(1)
             };
             });
           }
@@ -3202,7 +3239,6 @@
               publishedAt: a.pubDate,
               date: formatDate(a.pubDate),
               words: text.split(/\s+/).filter(w => w).length,
-              avgScore: (70 + Math.random() * 25).toFixed(1)
             };
             });
           }
@@ -3233,7 +3269,6 @@
                 publishedAt: a.publishedAt,
                 date: formatDate(a.publishedAt || new Date().toISOString()),
                 words: text.split(/\s+/).filter(w => w).length,
-                avgScore: (70 + Math.random() * 25).toFixed(1)
               };
               });
             } catch (e) { console.log('Perplexity parse error:', e); }
@@ -3268,7 +3303,6 @@
                 publishedAt: a.publishedAt,
                 date: formatDate(a.publishedAt || new Date().toISOString()),
                 words: text.split(/\s+/).filter(w => w).length,
-                avgScore: (70 + Math.random() * 25).toFixed(1)
               };
               });
             } catch (e) { console.log('Grok parse error:', e); }
@@ -3330,7 +3364,7 @@
       showScreen('scoring');
 
       try {
-        await runAIScoringAnimation();
+        await runAIScoring();
       } catch (err) {
         console.error('Scoring animation error:', err);
       }
@@ -3354,8 +3388,14 @@
       showScreen('swipe');
     }
 
-    async function runAIScoringAnimation() {
+    function clampScore(val) {
+      const n = parseInt(val) || 75;
+      return Math.max(0, Math.min(100, n));
+    }
+
+    async function runAIScoring() {
       const aiModels = ['gpt', 'claude', 'gemini', 'grok', 'pplx'];
+      const aiNames = { gpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini', grok: 'Grok', pplx: 'Perplexity' };
       const statusEl = document.getElementById('scoring-status');
       const countEl = document.getElementById('scoring-count');
 
@@ -3370,29 +3410,147 @@
         if (el) el.style.opacity = '0.3';
       });
 
-      // Animate each AI logo turning green (faster animation)
-      for (let i = 0; i < aiModels.length; i++) {
-        const ai = aiModels[i];
-        const aiNames = { gpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini', grok: 'Grok', pplx: 'Perplexity' };
+      statusEl.textContent = 'Preparing articles for AI analysis...';
+      countEl.textContent = `0 of ${articles.length} articles scored`;
 
-        statusEl.textContent = `${aiNames[ai]} analyzing...`;
+      // Batch articles (max 25 per call)
+      const BATCH_SIZE = 25;
+      const batches = [];
+      for (let i = 0; i < articles.length; i += BATCH_SIZE) {
+        batches.push({ start: i, items: articles.slice(i, i + BATCH_SIZE) });
+      }
 
-        await sleep(400); // Faster
+      let scoredCount = 0;
+      let allResults = [];
+      let apiSuccess = false;
 
-        // Light up this AI logo
+      try {
+        for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+          const batch = batches[batchIdx];
+          const articleList = batch.items.map((a, i) =>
+            `[${i}] "${a.title}" - ${(a.summary || '').substring(0, 200)}`
+          ).join('\n');
+
+          const prompt = `Score these ${batch.items.length} articles about "${selectedTopic}" from 5 AI perspectives.
+
+Perspectives and what they evaluate:
+- GPT: quality, clarity, breadth of impact
+- Claude: analytical depth, factual rigor, ethical implications
+- Gemini: visual potential, search trends, engagement
+- Grok: social virality, trending potential, community buzz
+- Perplexity: source credibility, citation quality, recency
+
+For each article return: scores (0-100 from each perspective), rationales (under 15 words each), sentiment (positive/negative/neutral/mixed), and 0-2 tags from [Trending, Hot, Top Article, Breaking, Viral, Must Read, Deep Dive].
+
+Tag criteria: Top Article=avg>=90, Hot=high engagement, Trending=currently trending, Breaking=very recent, Viral=high share potential, Must Read=exceptional importance, Deep Dive=long analytical.
+
+Articles:
+${articleList}
+
+Return JSON: {"results":[{"scores":{"gpt":82,"claude":78,"gemini":85,"grok":90,"pplx":80},"rationales":{"gpt":"...","claude":"...","gemini":"...","grok":"...","pplx":"..."},"sentiment":"positive","tags":["Trending"]}]}`;
+
+          // Animate - light up logo for current batch
+          const modelIdx = Math.min(batchIdx * 2, 4);
+          statusEl.textContent = `${aiNames[aiModels[modelIdx]]} analyzing batch ${batchIdx + 1}...`;
+
+          const resp = await fetch('/api/grok', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'grok-3-mini',
+              messages: [{ role: 'user', content: prompt }],
+              response_format: { type: 'json_object' },
+              temperature: 0.3
+            })
+          });
+
+          const data = await resp.json();
+
+          if (data.choices?.[0]?.message?.content) {
+            let content = data.choices[0].message.content;
+            content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+            const parsed = JSON.parse(content);
+
+            if (parsed.results && Array.isArray(parsed.results)) {
+              allResults = [...allResults, ...parsed.results];
+              scoredCount += batch.items.length;
+              apiSuccess = true;
+            }
+          }
+
+          // Light up logos proportional to progress
+          const progress = (batchIdx + 1) / batches.length;
+          const logosToLight = Math.ceil(progress * aiModels.length);
+          for (let k = 0; k < logosToLight; k++) {
+            const el = document.getElementById(`score-${aiModels[k]}`);
+            if (el && el.style.opacity !== '1') {
+              el.style.opacity = '1';
+              el.style.transform = 'scale(1.1)';
+              setTimeout(() => el.style.transform = 'scale(1)', 200);
+            }
+          }
+
+          countEl.textContent = `${scoredCount} of ${articles.length} articles scored`;
+          if (batchIdx < batches.length - 1) await sleep(300);
+        }
+      } catch (err) {
+        console.error('AI Scoring error:', err);
+      }
+
+      // Merge results into articles
+      if (apiSuccess && allResults.length > 0) {
+        for (let i = 0; i < articles.length && i < allResults.length; i++) {
+          const r = allResults[i];
+          if (r && r.scores) {
+            articles[i].scores = {
+              gpt: clampScore(r.scores.gpt),
+              claude: clampScore(r.scores.claude),
+              gemini: clampScore(r.scores.gemini),
+              grok: clampScore(r.scores.grok),
+              pplx: clampScore(r.scores.pplx)
+            };
+            const s = articles[i].scores;
+            articles[i].avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
+            articles[i].rationales = r.rationales || {};
+            articles[i].sentiment = r.sentiment || 'neutral';
+            articles[i].tags = Array.isArray(r.tags) ? r.tags : [];
+          }
+        }
+        statusEl.textContent = 'Complete! Ranking by AI scores...';
+        console.log('AI scoring complete (real)', allResults.length, 'results');
+      } else {
+        // Fallback: random scores
+        console.log('AI scoring failed, using fallback');
+        articles.forEach(a => {
+          if (!a.scores) {
+            a.scores = {
+              gpt: Math.floor(Math.random() * 25) + 70,
+              claude: Math.floor(Math.random() * 25) + 70,
+              gemini: Math.floor(Math.random() * 25) + 70,
+              grok: Math.floor(Math.random() * 25) + 70,
+              pplx: Math.floor(Math.random() * 25) + 70
+            };
+          }
+          const s = a.scores;
+          if (!a.avgScore) a.avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
+          a.sentiment = a.sentiment || 'neutral';
+          a.tags = a.tags || [];
+        });
+        statusEl.textContent = 'Scored with baseline estimates...';
+      }
+
+      // Ensure all logos lit
+      aiModels.forEach(ai => {
         const el = document.getElementById(`score-${ai}`);
         if (el) {
           el.style.opacity = '1';
           el.style.transform = 'scale(1.1)';
           setTimeout(() => el.style.transform = 'scale(1)', 200);
         }
+      });
 
-        countEl.textContent = `${Math.round(((i + 1) / aiModels.length) * articles.length)} articles scored`;
-      }
-
-      statusEl.textContent = 'Complete! Ranking by score...';
-      await sleep(500); // Faster
-      console.log('Scoring animation complete');
+      countEl.textContent = `${articles.length} articles scored`;
+      await sleep(500);
     }
 
     function generateFakeArticles(source, count) {
@@ -3516,8 +3674,7 @@
             gemini: Math.floor(Math.random() * 25) + 70,
             grok: Math.floor(Math.random() * 25) + 70,
             pplx: Math.floor(Math.random() * 25) + 70
-          },
-          avgScore: (Math.random() * 20 + 70).toFixed(1)
+          }
         };
       });
     }
@@ -3588,6 +3745,15 @@
       const grokScore = Math.round(scores.grok || (Math.floor(Math.random() * 25) + 70));
       const pplxScore = Math.round(scores.pplx || (Math.floor(Math.random() * 25) + 70));
 
+      // Sentiment + Tags
+      const sentiment = article.sentiment || 'neutral';
+      const sentimentLabel = sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
+      const articleTags = article.tags || [];
+      const tagClasses = { 'Trending': 'trending', 'Hot': 'hot', 'Top Article': 'top-article', 'Breaking': 'breaking', 'Viral': 'viral', 'Must Read': 'must-read', 'Deep Dive': 'deep-dive' };
+      const tagsHtml = articleTags.length > 0
+        ? `<div class="article-tags">${articleTags.map(t => `<span class="article-tag ${tagClasses[t] || ''}">${t}</span>`).join('')}</div>`
+        : '';
+
       card.innerHTML = `
         <div class="card-image" style="background-image: url('${imageUrl}')">
           <div style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; padding: 3px 8px; border-radius: 10px; font-weight: 600; font-size: 10px;">
@@ -3595,7 +3761,8 @@
           </div>
         </div>
         <div class="card-body">
-          <div class="card-source">${article.source}</div>
+          <div class="card-source">${article.source} <span class="sentiment-badge ${sentiment}">${sentimentLabel}</span></div>
+          ${tagsHtml}
           <h2 class="card-title">${article.title}</h2>
           <div class="card-topics">
             ${topics.map(t => `<span class="card-topic">${t}</span>`).join('')}
@@ -4335,11 +4502,16 @@
         const s = article.scores || {};
         const avgScore = Math.round(((s.gpt || 80) + (s.claude || 80) + (s.gemini || 80) + (s.grok || 80) + (s.pplx || 80)) / 5);
         const summary = article.summary || 'No description available.';
+        const sentiment = article.sentiment || 'neutral';
+        const sentimentLabel = sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
+        const articleTags = article.tags || [];
+        const tagClasses = { 'Trending': 'trending', 'Hot': 'hot', 'Top Article': 'top-article', 'Breaking': 'breaking', 'Viral': 'viral', 'Must Read': 'must-read', 'Deep Dive': 'deep-dive' };
 
         return `
           <div class="favorite-item" data-id="${article.id}" onclick="toggleFavExpand(this)">
             <button class="delete-x" onclick="event.stopPropagation(); deleteSavedArticle(${article.id})">×</button>
-            <div class="fav-source">${article.source}</div>
+            <div class="fav-source">${article.source} <span class="sentiment-badge ${sentiment}">${sentimentLabel}</span></div>
+            ${articleTags.length > 0 ? `<div class="article-tags">${articleTags.map(t => `<span class="article-tag ${tagClasses[t] || ''}">${t}</span>`).join('')}</div>` : ''}
             <div class="fav-title">${article.title}</div>
             <div class="fav-topics">
               ${topics.map(t => `<span class="fav-topic">${t}</span>`).join('')}
