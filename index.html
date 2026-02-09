@@ -2921,20 +2921,37 @@
       speechRecognition.start();
     }
 
+    // Pre-load best available voice for instant TTS
+    let bestVoice = null;
+    function loadVoices() {
+      const voices = window.speechSynthesis?.getVoices() || [];
+      bestVoice = voices.find(v => v.name === 'Samantha')
+        || voices.find(v => v.name.includes('Google US English'))
+        || voices.find(v => v.name.includes('Karen'))
+        || voices.find(v => v.name.includes('Moira'))
+        || voices.find(v => v.name.includes('Natural') && v.lang.startsWith('en'))
+        || voices.find(v => v.name.includes('Enhanced') && v.lang.startsWith('en'))
+        || voices.find(v => v.lang.startsWith('en-') && v.localService)
+        || null;
+      if (bestVoice) console.log('Voice loaded:', bestVoice.name);
+    }
+    if ('speechSynthesis' in window) {
+      loadVoices();
+      speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     async function answerQuestion(question) {
       const statusEl = document.getElementById('audio-status');
-      const responseAudio = document.getElementById('voice-response-audio');
 
       try {
         statusEl.textContent = 'Thinking...';
-        statusEl.style.animation = 'pulse-text 1.2s ease-in-out infinite';
 
-        const articleContext = selectedArticle
-          ? `Article: "${selectedArticle.title}"\nSummary: ${(selectedArticle.summary || '').substring(0, 300)}\nSource: ${selectedArticle.source || 'unknown'}`
-          : 'No specific article selected.';
+        const ctx = selectedArticle
+          ? `"${selectedArticle.title}" - ${(selectedArticle.summary || '').substring(0, 150)}`
+          : '';
 
-        const grokCtrl = new AbortController();
-        const grokTimer = setTimeout(() => grokCtrl.abort(), 25000);
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 8000);
         const resp = await fetch('/api/grok', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2942,69 +2959,36 @@
             model: 'grok-3-mini',
             messages: [{
               role: 'system',
-              content: 'Answer in 1-2 short sentences. Be direct.'
+              content: 'Reply in 1 sentence, max 20 words.'
             }, {
               role: 'user',
-              content: `${articleContext}\n\nQuestion: ${question}`
+              content: `${ctx}\n${question}`
             }],
-            temperature: 0.5
+            temperature: 0.3,
+            max_tokens: 50
           }),
-          signal: grokCtrl.signal
+          signal: ctrl.signal
         });
-        clearTimeout(grokTimer);
 
         const data = await resp.json();
-        const answer = data.choices?.[0]?.message?.content || 'Sorry, I could not generate an answer.';
+        const answer = data.choices?.[0]?.message?.content || 'Sorry, could not answer.';
 
-        // Don't show text - just speak it
-        statusEl.style.animation = '';
-        statusEl.textContent = 'Speaking...';
-
-        try {
-          const ttsCtrl = new AbortController();
-          const ttsTimer = setTimeout(() => ttsCtrl.abort(), 10000);
-          const ttsResp = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: answer, voice: 'nova' }),
-            signal: ttsCtrl.signal
-          });
-          clearTimeout(ttsTimer);
-
-          if (ttsResp.ok) {
-            const audioBlob = await ttsResp.blob();
-            const audioUrl = URL.createObjectURL(audioBlob);
-            responseAudio.src = audioUrl;
-            responseAudio.play();
-            statusEl.textContent = 'Playing answer...';
-            responseAudio.onended = () => {
-              statusEl.textContent = 'Ask another question!';
-              URL.revokeObjectURL(audioUrl);
-            };
-          } else {
-            throw new Error('TTS failed');
-          }
-        } catch (ttsErr) {
-          console.log('TTS failed, using browser voice:', ttsErr);
-          if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(answer);
-            utterance.rate = 1.05;
-            utterance.onend = () => { statusEl.textContent = 'Ask another question!'; };
-            window.speechSynthesis.speak(utterance);
-            statusEl.textContent = 'Playing answer...';
-          } else {
-            statusEl.textContent = answer;
-          }
+        // Speak instantly with browser TTS - no second API call
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(answer);
+          u.rate = 1.0;
+          u.pitch = 1.0;
+          if (bestVoice) u.voice = bestVoice;
+          statusEl.textContent = 'Speaking...';
+          u.onend = () => { statusEl.textContent = 'Ask another question!'; };
+          window.speechSynthesis.speak(u);
+        } else {
+          statusEl.textContent = answer;
         }
       } catch (err) {
         console.error('Voice chat error:', err);
-        statusEl.style.animation = '';
-        if (err.name === 'AbortError') {
-          statusEl.textContent = 'Response took too long, try again';
-        } else {
-          statusEl.textContent = 'Could not get answer, try again';
-        }
+        statusEl.textContent = err.name === 'AbortError' ? 'Too slow, try again' : 'Could not answer, try again';
       }
     }
 
