@@ -2905,6 +2905,7 @@
 
     async function answerQuestion(question) {
       const statusEl = document.getElementById('audio-status');
+      const responseAudio = document.getElementById('voice-response-audio');
 
       try {
         statusEl.textContent = 'Thinking...';
@@ -2934,20 +2935,43 @@
 
         statusEl.textContent = answer;
 
-        // Speak the answer using browser TTS
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(answer);
-          utterance.rate = 1.05;
-          utterance.pitch = 1;
-          // Pick a good voice if available
-          const voices = window.speechSynthesis.getVoices();
-          const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google') || v.name.includes('Natural'));
-          if (preferred) utterance.voice = preferred;
-          utterance.onend = () => {
-            statusEl.textContent = 'Ask another question!';
-          };
-          window.speechSynthesis.speak(utterance);
+        // Use the same OpenAI TTS voice as the audio summary
+        try {
+          statusEl.textContent = 'Speaking...';
+          const ttsResp = await fetch(`${API_BASE}/audio-summary`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: '',
+              source: '',
+              summary: answer,
+              quote: ''
+            })
+          });
+
+          if (ttsResp.ok) {
+            const audioBlob = await ttsResp.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            responseAudio.src = audioUrl;
+            responseAudio.play();
+            statusEl.textContent = answer;
+            responseAudio.onended = () => {
+              statusEl.textContent = 'Ask another question!';
+              URL.revokeObjectURL(audioUrl);
+            };
+          } else {
+            throw new Error('TTS failed');
+          }
+        } catch (ttsErr) {
+          // Fallback to browser TTS if backend fails
+          console.log('Backend TTS failed, using browser TTS:', ttsErr);
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(answer);
+            utterance.rate = 1.05;
+            utterance.onend = () => { statusEl.textContent = 'Ask another question!'; };
+            window.speechSynthesis.speak(utterance);
+          }
         }
       } catch (err) {
         console.error('Voice chat error:', err);
