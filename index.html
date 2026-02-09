@@ -3271,6 +3271,8 @@
             });
           }
         } else if (source === 'perplexity') {
+          const pplxCtrl = new AbortController();
+          const pplxTimeout = setTimeout(() => pplxCtrl.abort(), 8000);
           const resp = await fetch('/api/perplexity', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3278,10 +3280,12 @@
               model: 'sonar',
               messages: [{
                 role: 'user',
-                content: `Find 5 recent news articles about ${selectedTopic}. Return JSON array with objects having: title, summary, url, publishedAt (ISO date). Only return the JSON array, no other text.`
+                content: `List 5 recent news headlines about ${selectedTopic}. JSON array: [{"title":"...","summary":"...","url":"...","publishedAt":"..."}]`
               }]
-            })
+            }),
+            signal: pplxCtrl.signal
           });
+          clearTimeout(pplxTimeout);
           const data = await resp.json();
           if (data.choices?.[0]?.message?.content) {
             try {
@@ -3302,6 +3306,8 @@
             } catch (e) { console.log('Perplexity parse error:', e); }
           }
         } else if (source === 'grok') {
+          const grokCtrl = new AbortController();
+          const grokTimeout = setTimeout(() => grokCtrl.abort(), 8000);
           const resp = await fetch('/api/grok', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3309,10 +3315,12 @@
               model: 'grok-3-mini',
               messages: [{
                 role: 'user',
-                content: `Find 5 recent news articles about ${selectedTopic}. Return JSON array with objects having: title, summary, url, publishedAt (ISO date). Only return the JSON array, no other text.`
+                content: `List 5 recent news headlines about ${selectedTopic}. JSON array: [{"title":"...","summary":"...","url":"...","publishedAt":"..."}]`
               }]
-            })
+            }),
+            signal: grokCtrl.signal
           });
+          clearTimeout(grokTimeout);
           const data = await resp.json();
           if (data.choices?.[0]?.message?.content) {
             try {
