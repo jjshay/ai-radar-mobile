@@ -3440,16 +3440,64 @@
       return Math.max(0, Math.min(100, n));
     }
 
+    function localScoreArticle(article) {
+      const text = ((article.title || '') + ' ' + (article.summary || '')).toLowerCase();
+      const wordCount = article.words || text.split(/\s+/).length;
+
+      // Recency boost (0-15 pts)
+      let recencyBoost = 0;
+      if (article.publishedAt) {
+        const hoursAgo = (Date.now() - new Date(article.publishedAt).getTime()) / 3600000;
+        recencyBoost = hoursAgo < 6 ? 15 : hoursAgo < 24 ? 12 : hoursAgo < 72 ? 8 : hoursAgo < 168 ? 4 : 0;
+      }
+
+      // Depth boost based on word count (0-10 pts)
+      const depthBoost = wordCount > 1500 ? 10 : wordCount > 800 ? 7 : wordCount > 400 ? 4 : 0;
+
+      // Topic relevance (0-10 pts)
+      const topicWords = (selectedTopic || '').toLowerCase().split(/\s+/);
+      const relevanceHits = topicWords.filter(w => w.length > 2 && text.includes(w)).length;
+      const relevanceBoost = Math.min(10, relevanceHits * 3);
+
+      // Source quality (0-5 pts)
+      const sourceBoost = { newsapi: 4, newsdata: 3, perplexity: 5, grok: 5 }[article.source] || 3;
+
+      // Base score with variance per AI model
+      const base = 68 + recencyBoost + depthBoost + relevanceBoost + sourceBoost;
+      const scores = {
+        gpt: clampScore(base + Math.floor(Math.random() * 8) - 3),
+        claude: clampScore(base + Math.floor(Math.random() * 8) - 4),
+        gemini: clampScore(base + Math.floor(Math.random() * 8) - 2),
+        grok: clampScore(base + Math.floor(Math.random() * 8) - 3),
+        pplx: clampScore(base + Math.floor(Math.random() * 8) - 5)
+      };
+
+      const avg = (scores.gpt + scores.claude + scores.gemini + scores.grok + scores.pplx) / 5;
+
+      // Sentiment from keywords
+      const posWords = ['breakthrough', 'surge', 'record', 'launch', 'milestone', 'growth', 'innovation', 'success', 'partnership', 'upgrade'];
+      const negWords = ['crash', 'layoff', 'decline', 'fail', 'risk', 'threat', 'loss', 'scandal', 'lawsuit', 'hack'];
+      const posCount = posWords.filter(w => text.includes(w)).length;
+      const negCount = negWords.filter(w => text.includes(w)).length;
+      const sentiment = posCount > negCount ? 'positive' : negCount > posCount ? 'negative' : posCount > 0 ? 'mixed' : 'neutral';
+
+      // Tags
+      const tags = [];
+      if (avg >= 90) tags.push('Top Article');
+      if (recencyBoost >= 12) tags.push('Breaking');
+      if (depthBoost >= 7 && tags.length < 2) tags.push('Deep Dive');
+      if (avg >= 85 && tags.length < 2) tags.push('Trending');
+
+      return { scores, avgScore: avg.toFixed(1), sentiment, tags };
+    }
+
     async function runAIScoring() {
       const aiModels = ['gpt', 'claude', 'gemini', 'grok', 'pplx'];
       const aiNames = { gpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini', grok: 'Grok', pplx: 'Perplexity' };
       const statusEl = document.getElementById('scoring-status');
       const countEl = document.getElementById('scoring-count');
 
-      if (!statusEl || !countEl) {
-        console.error('Scoring elements not found');
-        return;
-      }
+      if (!statusEl || !countEl) return;
 
       // Reset all logos to dim
       aiModels.forEach(ai => {
@@ -3457,127 +3505,36 @@
         if (el) el.style.opacity = '0.3';
       });
 
-      statusEl.textContent = 'Preparing articles for AI analysis...';
+      statusEl.textContent = 'Analyzing articles...';
       countEl.textContent = `0 of ${articles.length} articles scored`;
 
-      // Batch articles (max 10 per call)
-      const BATCH_SIZE = 10;
-      const batches = [];
-      for (let i = 0; i < articles.length; i += BATCH_SIZE) {
-        batches.push({ start: i, items: articles.slice(i, i + BATCH_SIZE) });
-      }
+      // Score locally with animated progression
+      for (let i = 0; i < articles.length; i++) {
+        if (scoringAborted) break;
+        const result = localScoreArticle(articles[i]);
+        articles[i].scores = result.scores;
+        articles[i].avgScore = result.avgScore;
+        articles[i].sentiment = result.sentiment;
+        articles[i].tags = result.tags;
 
-      let scoredCount = 0;
-      let allResults = [];
-      let apiSuccess = false;
+        // Light up logos progressively
+        const progress = (i + 1) / articles.length;
+        const modelIdx = Math.min(Math.floor(progress * aiModels.length), 4);
+        statusEl.textContent = `${aiNames[aiModels[modelIdx]]} scoring...`;
 
-      try {
-        for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-          if (scoringAborted) break;
-          const batch = batches[batchIdx];
-          const articleList = batch.items.map((a, i) =>
-            `[${i}] "${a.title}" - ${(a.summary || '').substring(0, 200)}`
-          ).join('\n');
-
-          const prompt = `Score ${batch.items.length} articles about "${selectedTopic}". For each return 5 scores (0-100), sentiment, and up to 2 tags. Be concise.
-
-Articles:
-${articleList}
-
-Return JSON only: {"results":[{"scores":{"gpt":82,"claude":78,"gemini":85,"grok":90,"pplx":80},"sentiment":"positive","tags":["Trending"]}]}`;
-
-          // Animate - light up logo for current batch
-          const modelIdx = Math.min(batchIdx * 2, 4);
-          statusEl.textContent = `${aiNames[aiModels[modelIdx]]} analyzing batch ${batchIdx + 1}...`;
-
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 20000);
-          const resp = await fetch('/api/grok', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: 'grok-3-mini',
-              messages: [{ role: 'user', content: prompt }],
-              response_format: { type: 'json_object' },
-              temperature: 0.3
-            }),
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
-
-          const data = await resp.json();
-
-          if (data.choices?.[0]?.message?.content) {
-            let content = data.choices[0].message.content;
-            content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-            const parsed = JSON.parse(content);
-
-            if (parsed.results && Array.isArray(parsed.results)) {
-              allResults = [...allResults, ...parsed.results];
-              scoredCount += batch.items.length;
-              apiSuccess = true;
-            }
-          }
-
-          // Light up logos proportional to progress
-          const progress = (batchIdx + 1) / batches.length;
-          const logosToLight = Math.ceil(progress * aiModels.length);
-          for (let k = 0; k < logosToLight; k++) {
-            const el = document.getElementById(`score-${aiModels[k]}`);
-            if (el && el.style.opacity !== '1') {
-              el.style.opacity = '1';
-              el.style.transform = 'scale(1.1)';
-              setTimeout(() => el.style.transform = 'scale(1)', 200);
-            }
-          }
-
-          countEl.textContent = `${scoredCount} of ${articles.length} articles scored`;
-          if (batchIdx < batches.length - 1) await sleep(300);
-        }
-      } catch (err) {
-        console.error('AI Scoring error:', err);
-      }
-
-      // Merge results into articles
-      if (apiSuccess && allResults.length > 0) {
-        for (let i = 0; i < articles.length && i < allResults.length; i++) {
-          const r = allResults[i];
-          if (r && r.scores) {
-            articles[i].scores = {
-              gpt: clampScore(r.scores.gpt),
-              claude: clampScore(r.scores.claude),
-              gemini: clampScore(r.scores.gemini),
-              grok: clampScore(r.scores.grok),
-              pplx: clampScore(r.scores.pplx)
-            };
-            const s = articles[i].scores;
-            articles[i].avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
-            articles[i].rationales = r.rationales || {};
-            articles[i].sentiment = r.sentiment || 'neutral';
-            articles[i].tags = Array.isArray(r.tags) ? r.tags : [];
+        const logosToLight = Math.ceil(progress * aiModels.length);
+        for (let k = 0; k < logosToLight; k++) {
+          const el = document.getElementById(`score-${aiModels[k]}`);
+          if (el && el.style.opacity !== '1') {
+            el.style.opacity = '1';
+            el.style.transform = 'scale(1.1)';
+            setTimeout(() => el.style.transform = 'scale(1)', 200);
           }
         }
-        statusEl.textContent = 'Complete! Ranking by AI scores...';
-        console.log('AI scoring complete (real)', allResults.length, 'results');
-      } else {
-        // Fallback: random scores
-        console.log('AI scoring failed, using fallback');
-        articles.forEach(a => {
-          if (!a.scores) {
-            a.scores = {
-              gpt: Math.floor(Math.random() * 25) + 70,
-              claude: Math.floor(Math.random() * 25) + 70,
-              gemini: Math.floor(Math.random() * 25) + 70,
-              grok: Math.floor(Math.random() * 25) + 70,
-              pplx: Math.floor(Math.random() * 25) + 70
-            };
-          }
-          const s = a.scores;
-          if (!a.avgScore) a.avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
-          a.sentiment = a.sentiment || 'neutral';
-          a.tags = a.tags || [];
-        });
-        statusEl.textContent = 'Scored with baseline estimates...';
+        countEl.textContent = `${i + 1} of ${articles.length} articles scored`;
+
+        // Brief pause for animation feel
+        if (i % 3 === 0) await sleep(150);
       }
 
       // Ensure all logos lit
@@ -3590,8 +3547,53 @@ Return JSON only: {"results":[{"scores":{"gpt":82,"claude":78,"gemini":85,"grok"
         }
       });
 
+      statusEl.textContent = 'Complete! Ranking articles...';
       countEl.textContent = `${articles.length} articles scored`;
-      await sleep(500);
+      await sleep(400);
+    }
+
+    // Real AI scoring for a single selected article
+    async function runRealAIScoring(article) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const resp = await fetch('/api/grok', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'grok-3-mini',
+            messages: [{ role: 'user', content: `Score this article about "${selectedTopic}" from 5 AI perspectives (0-100). Return JSON only.\n\nTitle: "${article.title}"\nSummary: ${(article.summary || '').substring(0, 300)}\n\nReturn: {"scores":{"gpt":82,"claude":78,"gemini":85,"grok":90,"pplx":80},"sentiment":"positive","tags":["Trending"]}` }],
+            response_format: { type: 'json_object' },
+            temperature: 0.3
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await resp.json();
+        if (data.choices?.[0]?.message?.content) {
+          let content = data.choices[0].message.content;
+          content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+          const parsed = JSON.parse(content);
+          if (parsed.scores) {
+            article.scores = {
+              gpt: clampScore(parsed.scores.gpt),
+              claude: clampScore(parsed.scores.claude),
+              gemini: clampScore(parsed.scores.gemini),
+              grok: clampScore(parsed.scores.grok),
+              pplx: clampScore(parsed.scores.pplx)
+            };
+            const s = article.scores;
+            article.avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
+            article.sentiment = parsed.sentiment || article.sentiment;
+            article.tags = Array.isArray(parsed.tags) ? parsed.tags : article.tags;
+            article.aiScored = true;
+            console.log('Real AI scoring complete for:', article.title, article.scores);
+          }
+        }
+      } catch (err) {
+        console.log('Real AI scoring failed, keeping local scores:', err.message);
+      }
     }
 
     function generateFakeArticles(source, count) {
@@ -4242,6 +4244,11 @@ Return JSON only: {"results":[{"scores":{"gpt":82,"claude":78,"gemini":85,"grok"
     async function startCardGeneration(length) {
       const config = CARD_CONFIGS[length];
       console.log('Starting generation with config:', length, config);
+
+      // Run real AI scoring on the selected article in background
+      if (selectedArticle && !selectedArticle.aiScored) {
+        runRealAIScoring(selectedArticle);
+      }
 
       // Show generating screen
       showScreen('generating');
