@@ -2864,8 +2864,11 @@
           return `${m}:${sec < 10 ? '0' : ''}${sec}`;
         };
         audioEl.ontimeupdate = () => {
+          const elapsed = fmtTime(audioEl.currentTime);
           if (audioEl.duration && isFinite(audioEl.duration)) {
-            statusEl.textContent = `${fmtTime(audioEl.currentTime)} / ${fmtTime(audioEl.duration)}`;
+            statusEl.textContent = `${elapsed} / ${fmtTime(audioEl.duration)}`;
+          } else {
+            statusEl.textContent = `${elapsed} playing`;
           }
         };
 
