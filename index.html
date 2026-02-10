@@ -497,6 +497,17 @@
       overflow: hidden;
     }
 
+    .swipe-card .card-summary {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.4;
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
     .swipe-card .card-topics {
       display: flex;
       flex-wrap: wrap;
@@ -2847,11 +2858,23 @@
         const stopBtn = document.getElementById('audio-stop-btn');
         if (stopBtn) stopBtn.style.display = 'inline-block';
 
+        const fmtTime = (s) => {
+          const m = Math.floor(s / 60);
+          const sec = Math.floor(s % 60);
+          return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+        };
+        audioEl.ontimeupdate = () => {
+          if (audioEl.duration && isFinite(audioEl.duration)) {
+            statusEl.textContent = `${fmtTime(audioEl.currentTime)} / ${fmtTime(audioEl.duration)}`;
+          }
+        };
+
         audioEl.onended = () => {
           isAudioPlaying = false;
           iconEl.textContent = '🎧';
           textEl.textContent = 'Replay';
           statusEl.textContent = '';
+          audioEl.ontimeupdate = null;
           if (stopBtn) stopBtn.style.display = 'none';
         };
 
@@ -3225,7 +3248,7 @@
         let directArticles = [];
 
         if (source === 'newsapi') {
-          const resp = await fetch(`/api/newsapi?q=${encodeURIComponent(selectedTopic)}&pageSize=8`);
+          const resp = await fetch(`/api/newsapi?q=${encodeURIComponent(selectedTopic)}&pageSize=12`);
           const data = await resp.json();
           if (data.articles) {
             directArticles = data.articles.map(a => {
@@ -3272,7 +3295,7 @@
               model: 'sonar',
               messages: [{
                 role: 'user',
-                content: `List 5 recent news headlines about ${selectedTopic}. JSON array: [{"title":"...","summary":"...","url":"...","publishedAt":"..."}]`
+                content: `List 10 recent news headlines about ${selectedTopic}. For each, provide a detailed 3-4 sentence summary. JSON array: [{"title":"...","summary":"...","url":"...","publishedAt":"..."}]`
               }]
             }),
             signal: pplxCtrl.signal
@@ -3307,7 +3330,7 @@
               model: 'grok-3-mini',
               messages: [{
                 role: 'user',
-                content: `List 5 recent news headlines about ${selectedTopic}. JSON array: [{"title":"...","summary":"...","url":"...","publishedAt":"..."}]`
+                content: `List 10 recent news headlines about ${selectedTopic}. For each, provide a detailed 3-4 sentence summary. JSON array: [{"title":"...","summary":"...","url":"...","publishedAt":"..."}]`
               }]
             }),
             signal: grokCtrl.signal
@@ -3396,32 +3419,7 @@
     function finishAndShowSwipe() {
       const totalBefore = articles.length;
 
-      // --- DEDUP: Remove articles with very similar titles ---
-      try {
-        const normalize = (t) => (t || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
-        const seen = [];
-        const deduped = [];
-        for (const a of articles) {
-          const norm = normalize(a.title);
-          const isDupe = seen.some(s => {
-            if (norm === s) return true;
-            // Check if one title contains 80%+ of the other's words
-            const wordsA = norm.split(' ');
-            const wordsB = s.split(' ');
-            const overlap = wordsA.filter(w => wordsB.includes(w)).length;
-            return overlap >= Math.min(wordsA.length, wordsB.length) * 0.7;
-          });
-          if (!isDupe) {
-            seen.push(norm);
-            deduped.push(a);
-          }
-        }
-        const dupesRemoved = totalBefore - deduped.length;
-        if (dupesRemoved > 0) console.log(`Dedup: removed ${dupesRemoved} duplicate articles`);
-        articles = deduped;
-      } catch (e) { console.error('Dedup error:', e); }
-
-      // --- TRENDING: Tag articles whose title appears across multiple sources ---
+      // --- TRENDING: Tag BEFORE dedup so cross-source overlap is detected ---
       try {
         const normalize = (t) => (t || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
         for (const a of articles) {
@@ -3446,30 +3444,47 @@
         }
       } catch (e) { console.error('Trending tag error:', e); }
 
+      // --- DEDUP: Remove articles with very similar titles ---
+      try {
+        const normalize = (t) => (t || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+        const seen = [];
+        const deduped = [];
+        for (const a of articles) {
+          const norm = normalize(a.title);
+          const isDupe = seen.some(s => {
+            if (norm === s) return true;
+            const wordsA = norm.split(' ');
+            const wordsB = s.split(' ');
+            const overlap = wordsA.filter(w => wordsB.includes(w)).length;
+            return overlap >= Math.min(wordsA.length, wordsB.length) * 0.7;
+          });
+          if (!isDupe) {
+            seen.push(norm);
+            deduped.push(a);
+          }
+        }
+        const dupesRemoved = totalBefore - deduped.length;
+        if (dupesRemoved > 0) console.log(`Dedup: removed ${dupesRemoved} duplicate articles`);
+        articles = deduped;
+      } catch (e) { console.error('Dedup error:', e); }
+
       // --- GAME CHANGER: Tag articles with high avg scores ---
       try {
         for (const a of articles) {
           const avg = parseFloat(a.avgScore) || 0;
-          if (avg >= 93) {
+          if (avg >= 88) {
             if (!a.tags) a.tags = [];
             if (!a.tags.includes('Game Changer')) a.tags.push('Game Changer');
           }
         }
       } catch (e) { console.error('Game Changer tag error:', e); }
 
-      // --- FILTER: Remove articles under 500 words ---
+      // --- FILTER: Remove articles under 100 words ---
       try {
         const beforeFilter = articles.length;
-        const filtered = articles.filter(a => (a.words || 0) >= 500);
-        // If filtering removes >80% of articles, use a lower threshold
-        if (filtered.length < beforeFilter * 0.2 && beforeFilter > 3) {
-          const softFiltered = articles.filter(a => (a.words || 0) >= 50);
-          console.log(`500w filter too aggressive (${filtered.length}/${beforeFilter} left), using 50w threshold: ${softFiltered.length} remain`);
-          articles = softFiltered;
-        } else {
-          if (beforeFilter - filtered.length > 0) console.log(`Filtered out ${beforeFilter - filtered.length} articles under 500 words`);
-          articles = filtered;
-        }
+        const filtered = articles.filter(a => (a.words || 0) >= 100);
+        if (beforeFilter - filtered.length > 0) console.log(`Filtered out ${beforeFilter - filtered.length} articles under 100 words`);
+        articles = filtered.length > 0 ? filtered : articles;
       } catch (e) { console.error('Filter error:', e); }
 
       // Sort articles by combined score
@@ -3485,7 +3500,10 @@
       } catch (sortErr) {
         console.error('Sort error:', sortErr);
       }
-      console.log(`Transitioning to swipe screen with ${articles.length} articles (from ${totalBefore} raw)`);
+      const filtered = totalBefore - articles.length;
+      console.log(`Transitioning to swipe screen with ${articles.length} articles (from ${totalBefore} raw, ${filtered} filtered)`);
+      // Store filter info for display
+      window._filterInfo = filtered > 0 ? `(${filtered} filtered)` : '';
       showScreen('swipe');
     }
 
@@ -3837,16 +3855,24 @@
       // Update card counter
       const currentNum = currentCardIndex + 1;
       const totalNum = articles.length;
+      const filterNote = window._filterInfo || '';
       document.getElementById('swipe-card-counter').innerHTML =
-        `Card <span>${Math.min(currentNum, totalNum)}</span> of <span>${totalNum}</span>`;
+        `Card <span>${Math.min(currentNum, totalNum)}</span> of <span>${totalNum}</span>${filterNote ? ` <span style="font-size:9px;color:var(--text-muted);">${filterNote}</span>` : ''}`;
 
       // Clear existing cards
       stack.querySelectorAll('.swipe-card').forEach(c => c.remove());
 
       if (remaining === 0) {
-        showToast('No more articles!');
+        stack.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+            <div style="font-size: 48px; margin-bottom: 12px;">📭</div>
+            <h3 style="color: var(--gold); margin-bottom: 8px;">${totalNum === 0 ? 'No articles found' : 'All done!'}</h3>
+            <p style="font-size: 13px; line-height: 1.4;">${totalNum === 0 ? 'Try a different topic or fetch more sources.' : `You've reviewed all ${totalNum} articles.`}</p>
+            <button onclick="goHome()" style="margin-top: 16px; background: var(--gold); color: var(--bg-primary); border: none; padding: 10px 24px; border-radius: 20px; font-weight: 600; cursor: pointer;">← Back to Sources</button>
+          </div>
+        `;
         document.getElementById('swipe-card-counter').innerHTML =
-          `Card <span>${totalNum}</span> of <span>${totalNum}</span> - Done!`;
+          totalNum === 0 ? '<span>No articles</span>' : `<span>${totalNum}</span> of <span>${totalNum}</span> - Done!`;
         return;
       }
 
@@ -3914,12 +3940,13 @@
           <div class="card-source">${article.source} <span class="sentiment-badge ${sentiment}">${sentimentLabel}</span></div>
           ${tagsHtml}
           <h2 class="card-title">${article.title}</h2>
+          <p class="card-summary">${(article.summary || '').slice(0, 120)}${(article.summary || '').length > 120 ? '...' : ''}</p>
           <div class="card-topics">
             ${topics.map(t => `<span class="card-topic">${t}</span>`).join('')}
           </div>
           <div class="card-meta">
             <span>${article.date || 'Today'}</span>
-            <span style="font-weight: 700; color: ${wordCount >= 150 ? '#22c55e' : wordCount >= 80 ? '#eab308' : '#ef4444'};">${wordCount}w</span>
+            <span style="font-weight: 700; color: ${wordCount >= 150 ? '#22c55e' : wordCount >= 80 ? '#eab308' : '#ef4444'};">${wordCount}w · ~${Math.max(4, Math.round(wordCount / 80))} slides</span>
           </div>
           <div class="ai-scores-section">
             <div style="text-align: center; margin-bottom: 6px;">
