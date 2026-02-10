@@ -2402,17 +2402,15 @@
           <div class="arrow">← SKIP</div>
         </div>
         <div class="hint save">
-          <div class="arrow">↑ GO BACK</div>
+          <div class="arrow">↑ HOME</div>
         </div>
         <div class="hint delete">
-          <div class="arrow">↓ SAVE</div>
+          <div class="arrow">↓ BACK</div>
         </div>
         <div class="hint create">
           <div class="arrow">CREATE →</div>
         </div>
       </div>
-
-      <button class="home-btn" onclick="goHome()">🏠 Home</button>
     </div>
 
     <!-- SCREEN 3: ARTICLE DETAIL -->
@@ -4180,11 +4178,14 @@
           goHome();
           return;
         case 'down':
-          // SAVE FOR LATER
-          exitY = window.innerHeight;
-          addToSavedForLater(article);
-          showToast('Saved for later 📌');
-          break;
+          // BACK - Go to previous card
+          card.style.transform = '';
+          if (currentCardIndex > 0) {
+            currentCardIndex--;
+            renderCards();
+            showToast('Back');
+          }
+          return;
       }
 
       card.style.transition = 'transform 0.3s ease';
