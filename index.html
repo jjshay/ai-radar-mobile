@@ -2402,7 +2402,7 @@
           <div class="arrow">← SKIP</div>
         </div>
         <div class="hint save">
-          <div class="arrow">↑ NOT INTERESTED</div>
+          <div class="arrow">↑ GO BACK</div>
         </div>
         <div class="hint delete">
           <div class="arrow">↓ SAVE</div>
@@ -4175,11 +4175,10 @@
           showToast('Skipped');
           break;
         case 'up':
-          // NOT INTERESTED - Delete and learn
-          exitY = -window.innerHeight;
-          recordNotInterested(article);
-          showToast('Not interested 👎');
-          break;
+          // GO BACK - Return to home/sources screen
+          card.style.transform = '';
+          goHome();
+          return;
         case 'down':
           // SAVE FOR LATER
           exitY = window.innerHeight;
