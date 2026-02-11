@@ -2275,10 +2275,128 @@
       cursor: pointer;
       margin: 0 auto;
     }
+
+    /* ============================================
+       LOADING SKELETON
+       ============================================ */
+    @keyframes skeleton-shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .skeleton-card {
+      width: 90%;
+      max-width: 340px;
+      background: var(--bg-card);
+      border-radius: 20px;
+      overflow: hidden;
+      margin: 0 auto;
+    }
+
+    .skeleton-image {
+      height: 160px;
+      background: linear-gradient(90deg, var(--bg-secondary) 25%, rgba(255,255,255,0.08) 50%, var(--bg-secondary) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+    }
+
+    .skeleton-body {
+      padding: 16px;
+    }
+
+    .skeleton-line {
+      height: 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, var(--bg-secondary) 25%, rgba(255,255,255,0.08) 50%, var(--bg-secondary) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+    }
+
+    .skeleton-line.short { width: 40%; }
+    .skeleton-line.medium { width: 70%; }
+    .skeleton-line.long { width: 100%; }
+    .skeleton-line.title { height: 18px; width: 85%; }
+
+    /* ============================================
+       CARD ACTION BUTTONS (Share / Save)
+       ============================================ */
+    .card-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 4px 0 0;
+    }
+
+    .card-action-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 14px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+
+    .card-action-btn:active {
+      background: var(--gold);
+      color: var(--bg-primary);
+      border-color: var(--gold);
+    }
+
+    .card-action-btn.saved {
+      background: var(--gold);
+      color: var(--bg-primary);
+      border-color: var(--gold);
+    }
+
+    /* ============================================
+       PULL TO REFRESH
+       ============================================ */
+    .pull-indicator {
+      text-align: center;
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .pull-indicator.visible {
+      opacity: 1;
+    }
+
+    /* ============================================
+       OFFLINE INDICATOR
+       ============================================ */
+    .offline-banner {
+      background: #f59e0b;
+      color: #000;
+      text-align: center;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      display: none;
+    }
+
+    .offline-banner.show {
+      display: block;
+    }
   </style>
 </head>
 <body>
   <div class="app">
+    <div class="offline-banner" id="offline-banner">Offline - showing cached articles</div>
 
     <!-- SCREEN 1: HOME -->
     <div id="screen-home" class="screen active">
@@ -2304,7 +2422,7 @@
       <div class="sources-grid">
         <div class="source-btn done" data-source="sheets" onclick="toggleSource('sheets')">
           <div class="checkmark">✓</div>
-          <div class="icon"><img src="assets/newsapi.png" alt="Curated"></div>
+          <div class="icon"><img src="assets/sheets.png" alt="Curated"></div>
           <div class="name">AI Scored</div>
           <div class="count">-</div>
         </div>
@@ -2369,6 +2487,16 @@
       </div>
 
       <div class="card-stack" id="card-stack">
+        <!-- Loading skeleton (hidden once cards load) -->
+        <div class="skeleton-card" id="loading-skeleton">
+          <div class="skeleton-image"></div>
+          <div class="skeleton-body">
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line long"></div>
+            <div class="skeleton-line medium"></div>
+          </div>
+        </div>
         <!-- Cards inserted dynamically -->
         <div class="swipe-indicator left">⏭️</div>
         <div class="swipe-indicator right">🎨</div>
@@ -3192,6 +3320,8 @@
       document.getElementById('screen-' + screenId).classList.add('active');
 
       if (screenId === 'swipe') {
+        const skeleton = document.getElementById('loading-skeleton');
+        if (skeleton && articles.length > 0) skeleton.style.display = 'none';
         renderCards();
       } else if (screenId === 'favorites') {
         renderFavorites();
@@ -3232,7 +3362,7 @@
             source: (cols[6] || '').trim(),
             date: (cols[3] || '').trim(),
             words: parseInt(cols[22]) || 500,
-            image: null,
+            image: (cols[23] || '').trim() || null, // Check for image column, fallback to null
             avgScore: avgScore,
             scores: {
               gpt: parseInt(cols[8]) || 0,
@@ -3458,16 +3588,14 @@
 
     function skipScoring() {
       scoringAborted = true;
-      // Apply fallback scores to any unscored articles
+      // Apply local scores to any unscored articles (skip = use heuristic scoring)
       articles.forEach(a => {
         if (!a.scores) {
-          a.scores = {
-            gpt: Math.floor(Math.random() * 25) + 70,
-            claude: Math.floor(Math.random() * 25) + 70,
-            gemini: Math.floor(Math.random() * 25) + 70,
-            grok: Math.floor(Math.random() * 25) + 70,
-            pplx: Math.floor(Math.random() * 25) + 70
-          };
+          const result = localScoreArticle(a);
+          a.scores = result.scores;
+          a.avgScore = result.avgScore;
+          a.sentiment = result.sentiment;
+          a.tags = result.tags;
         }
         const s = a.scores;
         if (!a.avgScore) a.avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
@@ -3540,11 +3668,15 @@
         }
       } catch (e) { console.error('Game Changer tag error:', e); }
 
-      // --- FILTER: Remove articles under 100 words ---
+      // --- FILTER: Remove articles under 100 words (sheets only - live sources have truncated text) ---
       try {
         const beforeFilter = articles.length;
-        const filtered = articles.filter(a => (a.words || 0) >= 100);
-        if (beforeFilter - filtered.length > 0) console.log(`Filtered out ${beforeFilter - filtered.length} articles under 100 words`);
+        const filtered = articles.filter(a => {
+          // Don't filter live sources - they have truncated descriptions
+          if (a.source === 'newsapi' || a.source === 'newsdata' || a.source === 'perplexity' || a.source === 'grok') return true;
+          return (a.words || 0) >= 100;
+        });
+        if (beforeFilter - filtered.length > 0) console.log(`Filtered out ${beforeFilter - filtered.length} short articles`);
         articles = filtered.length > 0 ? filtered : articles;
       } catch (e) { console.error('Filter error:', e); }
 
@@ -3565,6 +3697,8 @@
       console.log(`Transitioning to swipe screen with ${articles.length} articles (from ${totalBefore} raw, ${filtered} filtered)`);
       // Store filter info for display
       window._filterInfo = filtered > 0 ? `(${filtered} filtered)` : '';
+      // Cache articles for offline use
+      cacheArticlesOffline();
       showScreen('swipe');
     }
 
@@ -3574,6 +3708,23 @@
       btn.textContent = 'LOADING...';
       scoringAborted = false;
       articles = [];
+
+      // If offline, try loading from cache
+      if (!navigator.onLine) {
+        const cached = loadOfflineCache();
+        if (cached) {
+          articles = cached.articles;
+          document.getElementById('offline-banner').classList.add('show');
+          btn.textContent = `${articles.length} CACHED ARTICLES`;
+          await sleep(300);
+          finishAndShowSwipe();
+          return;
+        }
+        btn.textContent = 'NO CONNECTION';
+        btn.disabled = false;
+        return;
+      }
+      document.getElementById('offline-banner').classList.remove('show');
 
       const sources = selectedSources.size > 0 ? Array.from(selectedSources) : ['sheets'];
       const useSheets = sources.includes('sheets');
@@ -3596,8 +3747,9 @@
         console.log('Sheets loaded:', sheetArticles.length, 'for topic:', selectedTopic);
       }
 
-      // Step 2: Fetch from NewsAPI - always fetch if selected, or auto-fetch if sheets had no matches
-      const needsLiveNews = useNewsAPI || (useSheets && articles.length === 0);
+      // Step 2: Fetch from NewsAPI - always for Surprise Me, or if selected, or if sheets had no matches
+      const isSurpriseMe = selectedTopic === 'top news world today';
+      const needsLiveNews = useNewsAPI || isSurpriseMe || (useSheets && articles.length === 0);
       if (needsLiveNews) {
         const dd = document.getElementById('topic-dropdown');
         const topicName = dd.options[dd.selectedIndex].text;
@@ -3608,17 +3760,10 @@
           if (newsapiBtn) {
             newsapiBtn.classList.add('done');
           }
-          // Score the live articles that don't have scores yet
+          // Live articles will be scored by Grok API on the scoring screen
           const unscored = articles.filter(a => !a.aiScored);
           if (unscored.length > 0) {
-            btn.textContent = 'SCORING LIVE ARTICLES...';
-            for (const a of unscored) {
-              const result = localScoreArticle(a);
-              a.scores = result.scores;
-              a.avgScore = result.avgScore;
-              a.sentiment = result.sentiment;
-              a.tags = result.tags;
-            }
+            btn.textContent = `${unscored.length} ARTICLES TO SCORE...`;
           }
         } catch (e) {
           console.error('NewsAPI fetch failed:', e);
@@ -3733,21 +3878,38 @@
         if (el) el.style.opacity = '0.3';
       });
 
-      statusEl.textContent = 'Analyzing articles with AI...';
-      countEl.textContent = `0 of ${articles.length} articles scored`;
+      // Only score articles that aren't already AI-scored (sheets articles are pre-scored)
+      const toScoreIndices = [];
+      for (let i = 0; i < articles.length; i++) {
+        if (!articles[i].aiScored) toScoreIndices.push(i);
+      }
 
-      // Score articles in batches of 5 using Grok for real AI scores
+      const totalToScore = toScoreIndices.length;
+      statusEl.textContent = totalToScore > 0 ? 'Analyzing articles with AI...' : 'All articles pre-scored!';
+      countEl.textContent = totalToScore > 0 ? `0 of ${totalToScore} articles scored` : `${articles.length} articles ready`;
+
+      if (totalToScore === 0) {
+        aiModels.forEach(ai => {
+          const el = document.getElementById(`score-${ai}`);
+          if (el) { el.style.opacity = '1'; }
+        });
+        await sleep(400);
+        return;
+      }
+
+      // Score unscored articles in batches of 5 using Grok API
       const BATCH_SIZE = 5;
       let scored = 0;
 
-      for (let batchStart = 0; batchStart < articles.length; batchStart += BATCH_SIZE) {
+      for (let batchStart = 0; batchStart < totalToScore; batchStart += BATCH_SIZE) {
         if (scoringAborted) break;
 
-        const batch = articles.slice(batchStart, batchStart + BATCH_SIZE);
+        const batchIndices = toScoreIndices.slice(batchStart, batchStart + BATCH_SIZE);
+        const batch = batchIndices.map(i => articles[i]);
         const articleList = batch.map((a, i) => `${i + 1}. "${a.title}" (${a.source})`).join('\n');
 
         // Light up logos progressively
-        const progress = (batchStart + batch.length) / articles.length;
+        const progress = (batchStart + batch.length) / totalToScore;
         const modelIdx = Math.min(Math.floor(progress * aiModels.length), 4);
         statusEl.textContent = `${aiNames[aiModels[modelIdx]]} scoring...`;
 
@@ -3775,7 +3937,7 @@
             const results = Array.isArray(parsed) ? parsed : (parsed.articles || parsed.results || [parsed]);
 
             for (let j = 0; j < batch.length; j++) {
-              const idx = batchStart + j;
+              const idx = batchIndices[j];
               const result = results[j];
               if (result?.scores) {
                 articles[idx].scores = {
@@ -3802,8 +3964,7 @@
             }
           } else {
             // API returned empty - fallback for batch
-            batch.forEach((_, j) => {
-              const idx = batchStart + j;
+            batchIndices.forEach(idx => {
               const fallback = localScoreArticle(articles[idx]);
               articles[idx].scores = fallback.scores;
               articles[idx].avgScore = fallback.avgScore;
@@ -3814,8 +3975,7 @@
           }
         } catch (err) {
           console.log('Batch scoring error, using local fallback:', err.message);
-          batch.forEach((_, j) => {
-            const idx = batchStart + j;
+          batchIndices.forEach(idx => {
             const fallback = localScoreArticle(articles[idx]);
             articles[idx].scores = fallback.scores;
             articles[idx].avgScore = fallback.avgScore;
@@ -3835,7 +3995,7 @@
             setTimeout(() => el.style.transform = 'scale(1)', 200);
           }
         }
-        countEl.textContent = `${scored} of ${articles.length} articles scored`;
+        countEl.textContent = `${scored} of ${totalToScore} articles scored`;
       }
 
       // Ensure all logos lit
@@ -4028,6 +4188,8 @@
     // ============================================
     function renderCards() {
       const stack = document.getElementById('card-stack');
+      const skeleton = document.getElementById('loading-skeleton');
+      if (skeleton) skeleton.style.display = 'none';
       const remaining = articles.length - currentCardIndex;
 
       // Update card counter
@@ -4074,9 +4236,14 @@
       card.style.opacity = stackIndex === 0 ? '1' : `${1 - stackIndex * 0.15}`;
       card.dataset.id = article.id;
 
-      // Use article image or logo placeholder
-      const imageUrl = article.image || 'assets/logo-white.png';
+      // Use article image or generate gradient fallback for sheets articles
+      const imageUrl = article.image || '';
       const isLogoFallback = !article.image;
+      // Generate a unique gradient from article title hash
+      const hashCode = (article.title || '').split('').reduce((a, c) => (a << 5) - a + c.charCodeAt(0), 0);
+      const hue1 = Math.abs(hashCode % 360);
+      const hue2 = (hue1 + 40) % 360;
+      const gradientBg = `linear-gradient(135deg, hsl(${hue1}, 60%, 25%), hsl(${hue2}, 50%, 15%))`;
 
       // Extract key topics from title/summary
       const titleWords = (article.title + ' ' + article.summary).toUpperCase();
@@ -4091,16 +4258,18 @@
       const cardNum = currentCardIndex + stackIndex + 1;
       const totalCards = articles.length;
 
-      // Get individual scores (already 0-100 scale)
+      // Get individual scores (already 0-100 scale) - no random fallbacks
       const scores = article.scores || {};
-      const gptScore = Math.round(scores.gpt || (Math.floor(Math.random() * 25) + 70));
-      const claudeScore = Math.round(scores.claude || (Math.floor(Math.random() * 25) + 70));
-      const geminiScore = Math.round(scores.gemini || (Math.floor(Math.random() * 25) + 70));
-      const grokScore = Math.round(scores.grok || (Math.floor(Math.random() * 25) + 70));
-      const pplxScore = Math.round(scores.pplx || (Math.floor(Math.random() * 25) + 70));
+      const gptScore = Math.round(scores.gpt || 0);
+      const claudeScore = Math.round(scores.claude || 0);
+      const geminiScore = Math.round(scores.gemini || 0);
+      const grokScore = Math.round(scores.grok || 0);
+      const pplxScore = Math.round(scores.pplx || 0);
 
-      // Sentiment + Tags
-      const sentiment = article.sentiment || 'neutral';
+      // Sentiment derived from score if not set correctly
+      const avg = parseFloat(article.avgScore) || 0;
+      const sentiment = article.sentiment && article.sentiment !== 'neutral' ? article.sentiment :
+        (avg >= 85 ? 'positive' : avg >= 60 ? 'neutral' : avg > 0 ? 'negative' : 'neutral');
       const sentimentLabel = sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
       const articleTags = article.tags || [];
       const tagClasses = { 'Trending': 'trending', 'Hot': 'hot', 'Top Article': 'top-article', 'Breaking': 'breaking', 'Viral': 'viral', 'Must Read': 'must-read', 'Deep Dive': 'deep-dive', 'Game Changer': 'game-changer' };
@@ -4109,7 +4278,13 @@
         : '';
 
       card.innerHTML = `
-        <div class="card-image${isLogoFallback ? ' logo-fallback' : ''}" style="background-image: url('${imageUrl}')">
+        <div class="card-image${isLogoFallback ? ' logo-fallback' : ''}" style="${isLogoFallback ? `background: ${gradientBg};` : `background-image: url('${imageUrl}');`}">
+          ${isLogoFallback ? `<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 800; color: rgba(255,255,255,0.3);">${(article.source || 'NEWS').toUpperCase().slice(0, 12)}</div>
+              <div style="font-size: 40px; font-weight: 900; color: var(--gold); margin-top: 2px;">${Math.round(avg)}%</div>
+            </div>
+          </div>` : ''}
           <div style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; padding: 3px 8px; border-radius: 10px; font-weight: 600; font-size: 10px;">
             ${cardNum}/${totalCards}
           </div>
@@ -4125,6 +4300,10 @@
           <div class="card-meta">
             <span>${article.date || 'Today'}</span>
             <span style="font-weight: 700; color: ${wordCount >= 150 ? '#22c55e' : wordCount >= 80 ? '#eab308' : '#ef4444'};">${wordCount}w · ~${Math.max(4, Math.round(wordCount / 80))} slides</span>
+          </div>
+          <div class="card-actions">
+            <button class="card-action-btn save-action${savedForLater.find(s => s.title === article.title) ? ' saved' : ''}" data-article-id="${article.id}">${savedForLater.find(s => s.title === article.title) ? 'Saved' : 'Save'}</button>
+            <button class="card-action-btn share-action" data-article-id="${article.id}">Share</button>
           </div>
           <div class="ai-scores-section">
             <div style="text-align: center; margin-bottom: 6px;">
@@ -4167,6 +4346,26 @@
           showAIScoreDetail(ai, score, articleId, article);
         });
       });
+
+      // Save button
+      const saveBtn = card.querySelector('.save-action');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSaveArticle(article);
+          saveBtn.classList.toggle('saved');
+          saveBtn.textContent = saveBtn.classList.contains('saved') ? 'Saved' : 'Save';
+        });
+      }
+
+      // Share button
+      const shareBtn = card.querySelector('.share-action');
+      if (shareBtn) {
+        shareBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          shareArticle(article);
+        });
+      }
 
       return card;
     }
@@ -4404,6 +4603,112 @@
       const countEl = document.getElementById('fav-count');
       if (countEl) countEl.textContent = savedForLater.length;
     }
+
+    // ============================================
+    // SHARE & SAVE ACTIONS
+    // ============================================
+    function toggleSaveArticle(article) {
+      const idx = savedForLater.findIndex(s => s.title === article.title);
+      if (idx >= 0) {
+        savedForLater.splice(idx, 1);
+        showToast('Removed from saved');
+      } else {
+        savedForLater.unshift({ ...article, savedAt: new Date().toISOString() });
+        showToast('Saved!');
+      }
+      localStorage.setItem('ai-radar-saved', JSON.stringify(savedForLater));
+      updateSavedCount();
+    }
+
+    async function shareArticle(article) {
+      const shareData = {
+        title: article.title,
+        text: `${article.title} - AI Radar Score: ${Math.round(article.avgScore)}%`,
+        url: article.url || ''
+      };
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (e) {
+          if (e.name !== 'AbortError') console.log('Share failed:', e);
+        }
+      } else {
+        // Fallback: copy to clipboard
+        const text = `${article.title}\n${article.url || ''}`;
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('Link copied!');
+        } catch (e) {
+          showToast('Share not available');
+        }
+      }
+    }
+
+    // ============================================
+    // OFFLINE CACHE
+    // ============================================
+    const OFFLINE_CACHE_KEY = 'ai-radar-offline-cache';
+
+    function cacheArticlesOffline() {
+      try {
+        localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify({
+          timestamp: Date.now(),
+          topic: selectedTopic,
+          articles: articles.slice(0, 30) // Cache top 30
+        }));
+      } catch (e) { console.log('Offline cache write error:', e); }
+    }
+
+    function loadOfflineCache() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(OFFLINE_CACHE_KEY) || 'null');
+        if (cached && cached.articles && cached.articles.length > 0) {
+          return cached;
+        }
+      } catch (e) { /* no cache */ }
+      return null;
+    }
+
+    // ============================================
+    // PULL TO REFRESH
+    // ============================================
+    function setupPullToRefresh() {
+      const swipeScreen = document.getElementById('screen-swipe');
+      if (!swipeScreen) return;
+
+      let pullStartY = 0;
+      let pullDelta = 0;
+      let isPulling = false;
+
+      swipeScreen.addEventListener('touchstart', (e) => {
+        // Only activate at top of screen and when touching the header area
+        if (e.target.closest('.swipe-card') || e.target.closest('.card-stack')) return;
+        pullStartY = e.touches[0].clientY;
+        isPulling = true;
+      }, { passive: true });
+
+      swipeScreen.addEventListener('touchmove', (e) => {
+        if (!isPulling) return;
+        pullDelta = e.touches[0].clientY - pullStartY;
+        if (pullDelta > 40) {
+          showToast('Release to refresh...');
+        }
+      }, { passive: true });
+
+      swipeScreen.addEventListener('touchend', () => {
+        if (isPulling && pullDelta > 80) {
+          showToast('Refreshing...');
+          currentCardIndex = 0;
+          goHome();
+          setTimeout(() => fetchAllSources(), 300);
+        }
+        isPulling = false;
+        pullDelta = 0;
+      });
+    }
+
+    // Init pull-to-refresh
+    document.addEventListener('DOMContentLoaded', setupPullToRefresh);
 
     // ============================================
     // ARTICLE DETAIL MODAL
