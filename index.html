@@ -3134,41 +3134,14 @@
     async function setTopicAndFetchCounts(topic) {
       selectedTopic = topic;
 
-      // Show loading state on all source buttons
-      const sources = ['newsapi', 'newsdata', 'perplexity', 'grok'];
-      sources.forEach(source => {
-        const btn = document.querySelector(`.source-btn[data-source="${source}"]`);
-        if (btn) {
-          const countEl = btn.querySelector('.count');
-          if (countEl) countEl.textContent = '...';
-        }
-      });
+      // Reset counts on source buttons
+      document.querySelectorAll('.source-btn .count').forEach(el => { el.textContent = '-'; });
 
-      // Fetch counts for each source (simulated for demo)
-      for (const source of sources) {
-        await fetchSourceCount(source, topic);
+      // Update button text to reflect the topic
+      const btn = document.querySelector('.fetch-all-btn');
+      if (btn && !btn.disabled) {
+        btn.textContent = topic === 'artificial intelligence' ? 'LOAD ARTICLES' : `LOAD "${topic.toUpperCase()}"`;
       }
-    }
-
-    async function fetchSourceCount(source, topic) {
-      const btn = document.querySelector(`.source-btn[data-source="${source}"]`);
-
-      try {
-        // Try real backend
-        const response = await fetch(`${API_BASE}/api/articles/count?source=${source}&topic=${encodeURIComponent(topic)}`);
-        if (response.ok) {
-          const data = await response.json();
-          btn.querySelector('.count').textContent = data.count || 0;
-          return;
-        }
-      } catch (err) {
-        // Demo mode - generate random counts
-      }
-
-      // Demo: random article counts
-      await sleep(200 + Math.random() * 300);
-      const count = Math.floor(Math.random() * 15) + 3;
-      btn.querySelector('.count').textContent = count;
     }
 
     function updateFetchButton() {
@@ -3325,17 +3298,15 @@
     }
 
     function filterByTopic(articles, topic) {
-      if (!topic) return articles;
+      if (!topic || topic === 'artificial intelligence') return articles;
       const keywords = topic.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-      // Return all if no meaningful keywords, otherwise filter
       if (keywords.length === 0) return articles;
 
       const matched = articles.filter(a => {
-        const text = ((a.title || '') + ' ' + (a.source || '')).toLowerCase();
+        const text = ((a.title || '') + ' ' + (a.source || '') + ' ' + (a.summary || '')).toLowerCase();
         return keywords.some(kw => text.includes(kw));
       });
-      // If filter is too aggressive, return all articles
-      return matched.length >= 3 ? matched : articles;
+      return matched;
     }
 
     // ============================================
@@ -3637,11 +3608,16 @@
         console.log('Sheets loaded:', sheetArticles.length, 'for topic:', selectedTopic);
       }
 
-      // Step 2: Supplement with live NewsAPI (fast, topic-specific)
-      if (useNewsAPI) {
-        btn.textContent = 'FETCHING LIVE NEWS...';
+      // Step 2: Fetch from NewsAPI - always fetch if selected, or auto-fetch if sheets had no matches
+      const needsLiveNews = useNewsAPI || (useSheets && articles.length === 0);
+      if (needsLiveNews) {
+        btn.textContent = articles.length === 0 ? `SEARCHING "${selectedTopic.toUpperCase()}"...` : 'FETCHING LIVE NEWS...';
         try {
           await fetchSource('newsapi');
+          const newsapiBtn = document.querySelector('.source-btn[data-source="newsapi"]');
+          if (newsapiBtn) {
+            newsapiBtn.classList.add('done');
+          }
           // Score the live articles that don't have scores yet
           const unscored = articles.filter(a => !a.aiScored);
           if (unscored.length > 0) {
