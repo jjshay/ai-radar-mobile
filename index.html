@@ -3519,6 +3519,9 @@
       btn.textContent = 'FETCHING...';
       scoringAborted = false;
 
+      // Clear previous articles to avoid stale data mixing in
+      articles = [];
+
       const allSources = ['newsapi', 'newsdata', 'perplexity', 'grok'];
       const sources = selectedSources.size > 0 ? Array.from(selectedSources) : allSources;
 
@@ -3634,23 +3637,99 @@
         if (el) el.style.opacity = '0.3';
       });
 
-      statusEl.textContent = 'Analyzing articles...';
+      statusEl.textContent = 'Analyzing articles with AI...';
       countEl.textContent = `0 of ${articles.length} articles scored`;
 
-      // Score locally with animated progression
-      for (let i = 0; i < articles.length; i++) {
+      // Score articles in batches of 5 using Grok for real AI scores
+      const BATCH_SIZE = 5;
+      let scored = 0;
+
+      for (let batchStart = 0; batchStart < articles.length; batchStart += BATCH_SIZE) {
         if (scoringAborted) break;
-        const result = localScoreArticle(articles[i]);
-        articles[i].scores = result.scores;
-        articles[i].avgScore = result.avgScore;
-        articles[i].sentiment = result.sentiment;
-        articles[i].tags = result.tags;
+
+        const batch = articles.slice(batchStart, batchStart + BATCH_SIZE);
+        const articleList = batch.map((a, i) => `${i + 1}. "${a.title}" (${a.source})`).join('\n');
 
         // Light up logos progressively
-        const progress = (i + 1) / articles.length;
+        const progress = (batchStart + batch.length) / articles.length;
         const modelIdx = Math.min(Math.floor(progress * aiModels.length), 4);
         statusEl.textContent = `${aiNames[aiModels[modelIdx]]} scoring...`;
 
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+          const resp = await fetch('/api/grok', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'grok-3-mini',
+              messages: [{ role: 'user', content: `Score these ${batch.length} articles about "${selectedTopic}" from 5 AI perspectives (0-100). Consider newsworthiness, depth, sourcing quality, and relevance to the topic. Return ONLY a JSON array.\n\n${articleList}\n\nReturn: [{"scores":{"gpt":82,"claude":78,"gemini":85,"grok":90,"pplx":80},"sentiment":"positive","tags":["Trending"]}] for each article in order.` }],
+              response_format: { type: 'json_object' },
+              temperature: 0.3
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          const data = await resp.json();
+          if (data.choices?.[0]?.message?.content) {
+            let content = data.choices[0].message.content;
+            content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+            const parsed = JSON.parse(content);
+            const results = Array.isArray(parsed) ? parsed : (parsed.articles || parsed.results || [parsed]);
+
+            for (let j = 0; j < batch.length; j++) {
+              const idx = batchStart + j;
+              const result = results[j];
+              if (result?.scores) {
+                articles[idx].scores = {
+                  gpt: clampScore(result.scores.gpt),
+                  claude: clampScore(result.scores.claude),
+                  gemini: clampScore(result.scores.gemini),
+                  grok: clampScore(result.scores.grok),
+                  pplx: clampScore(result.scores.pplx)
+                };
+                const s = articles[idx].scores;
+                articles[idx].avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
+                articles[idx].sentiment = result.sentiment || 'neutral';
+                articles[idx].tags = Array.isArray(result.tags) ? result.tags : [];
+                articles[idx].aiScored = true;
+              } else {
+                // Fallback for this article
+                const fallback = localScoreArticle(articles[idx]);
+                articles[idx].scores = fallback.scores;
+                articles[idx].avgScore = fallback.avgScore;
+                articles[idx].sentiment = fallback.sentiment;
+                articles[idx].tags = fallback.tags;
+              }
+              scored++;
+            }
+          } else {
+            // API returned empty - fallback for batch
+            batch.forEach((_, j) => {
+              const idx = batchStart + j;
+              const fallback = localScoreArticle(articles[idx]);
+              articles[idx].scores = fallback.scores;
+              articles[idx].avgScore = fallback.avgScore;
+              articles[idx].sentiment = fallback.sentiment;
+              articles[idx].tags = fallback.tags;
+              scored++;
+            });
+          }
+        } catch (err) {
+          console.log('Batch scoring error, using local fallback:', err.message);
+          batch.forEach((_, j) => {
+            const idx = batchStart + j;
+            const fallback = localScoreArticle(articles[idx]);
+            articles[idx].scores = fallback.scores;
+            articles[idx].avgScore = fallback.avgScore;
+            articles[idx].sentiment = fallback.sentiment;
+            articles[idx].tags = fallback.tags;
+            scored++;
+          });
+        }
+
+        // Update UI
         const logosToLight = Math.ceil(progress * aiModels.length);
         for (let k = 0; k < logosToLight; k++) {
           const el = document.getElementById(`score-${aiModels[k]}`);
@@ -3660,10 +3739,7 @@
             setTimeout(() => el.style.transform = 'scale(1)', 200);
           }
         }
-        countEl.textContent = `${i + 1} of ${articles.length} articles scored`;
-
-        // Brief pause for animation feel
-        if (i % 3 === 0) await sleep(150);
+        countEl.textContent = `${scored} of ${articles.length} articles scored`;
       }
 
       // Ensure all logos lit
