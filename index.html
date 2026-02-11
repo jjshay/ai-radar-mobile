@@ -3385,14 +3385,24 @@
           };
         }).filter(Boolean);
 
+        // Filter out articles older than 30 days
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        const freshArticles = allArticles.filter(a => {
+          if (!a.date) return true;
+          const d = new Date(a.date);
+          return !isNaN(d.getTime()) && d.getTime() > thirtyDaysAgo;
+        });
+        const staleCount = allArticles.length - freshArticles.length;
+        if (staleCount > 0) console.log(`Filtered ${staleCount} stale articles (>30 days old)`);
+
         // Cache for next time
         localStorage.setItem(SHEETS_CACHE_KEY, JSON.stringify({
           timestamp: Date.now(),
-          articles: allArticles
+          articles: freshArticles
         }));
 
-        console.log('Loaded', allArticles.length, 'articles from Sheets');
-        return filterByTopic(allArticles, topic);
+        console.log('Loaded', freshArticles.length, 'fresh articles from Sheets');
+        return filterByTopic(freshArticles, topic);
       } catch (e) {
         console.error('Sheets fetch error:', e);
         // Try cache even if expired
@@ -4258,16 +4268,19 @@
       const cardNum = currentCardIndex + stackIndex + 1;
       const totalCards = articles.length;
 
-      // Get individual scores (already 0-100 scale) - no random fallbacks
+      // Get individual scores - null for missing/zero
       const scores = article.scores || {};
-      const gptScore = Math.round(scores.gpt || 0);
-      const claudeScore = Math.round(scores.claude || 0);
-      const geminiScore = Math.round(scores.gemini || 0);
-      const grokScore = Math.round(scores.grok || 0);
-      const pplxScore = Math.round(scores.pplx || 0);
+      const gptScore = scores.gpt ? Math.round(scores.gpt) : null;
+      const claudeScore = scores.claude ? Math.round(scores.claude) : null;
+      const geminiScore = scores.gemini ? Math.round(scores.gemini) : null;
+      const grokScore = scores.grok ? Math.round(scores.grok) : null;
+      const pplxScore = scores.pplx ? Math.round(scores.pplx) : null;
+      // Compute avg from valid scores only
+      const validScores = [gptScore, claudeScore, geminiScore, grokScore, pplxScore].filter(s => s !== null);
+      const computedAvg = validScores.length > 0 ? Math.round(validScores.reduce((a,b) => a+b, 0) / validScores.length) : Math.round(parseFloat(article.avgScore) || 0);
 
       // Sentiment derived from score if not set correctly
-      const avg = parseFloat(article.avgScore) || 0;
+      const avg = computedAvg || parseFloat(article.avgScore) || 0;
       const sentiment = article.sentiment && article.sentiment !== 'neutral' ? article.sentiment :
         (avg >= 85 ? 'positive' : avg >= 60 ? 'neutral' : avg > 0 ? 'negative' : 'neutral');
       const sentimentLabel = sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
@@ -4307,29 +4320,29 @@
           </div>
           <div class="ai-scores-section">
             <div style="text-align: center; margin-bottom: 6px;">
-              <span style="font-size: 18px; font-weight: 700; color: var(--gold);">${Math.round((gptScore + claudeScore + geminiScore + grokScore + pplxScore) / 5)}%</span>
-              <span style="font-size: 10px; color: #888; margin-left: 4px;">avg</span>
+              <span style="font-size: 18px; font-weight: 700; color: var(--gold);">${computedAvg}%</span>
+              <span style="font-size: 10px; color: #888; margin-left: 4px;">avg${validScores.length < 5 ? ` (${validScores.length}/5)` : ''}</span>
             </div>
             <div style="display: flex; justify-content: space-around; gap: 4px;">
-              <div class="ai-score-item" data-ai="gpt" data-score="${gptScore}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+              <div class="ai-score-item" data-ai="gpt" data-score="${gptScore || 0}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
                 <img src="logos/chatgpt.png" style="width:20px;height:20px;border-radius:50%;">
-                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${gptScore}</span>
+                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${gptScore !== null ? gptScore : '-'}</span>
               </div>
-              <div class="ai-score-item" data-ai="claude" data-score="${claudeScore}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+              <div class="ai-score-item" data-ai="claude" data-score="${claudeScore || 0}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
                 <img src="logos/claude.png" style="width:20px;height:20px;border-radius:50%;">
-                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${claudeScore}</span>
+                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${claudeScore !== null ? claudeScore : '-'}</span>
               </div>
-              <div class="ai-score-item" data-ai="gemini" data-score="${geminiScore}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+              <div class="ai-score-item" data-ai="gemini" data-score="${geminiScore || 0}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
                 <img src="logos/gemini.png" style="width:20px;height:20px;border-radius:50%;">
-                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${geminiScore}</span>
+                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${geminiScore !== null ? geminiScore : '-'}</span>
               </div>
-              <div class="ai-score-item" data-ai="grok" data-score="${grokScore}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+              <div class="ai-score-item" data-ai="grok" data-score="${grokScore || 0}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
                 <img src="logos/grok.png" style="width:20px;height:20px;border-radius:50%;background:#333;">
-                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${grokScore}</span>
+                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${grokScore !== null ? grokScore : '-'}</span>
               </div>
-              <div class="ai-score-item" data-ai="pplx" data-score="${pplxScore}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+              <div class="ai-score-item" data-ai="pplx" data-score="${pplxScore || 0}" data-article-id="${article.id}" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
                 <img src="logos/perplexity.png" style="width:20px;height:20px;border-radius:50%;background:#fff;">
-                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${pplxScore}</span>
+                <span style="font-size: 10px; font-weight: 600; color: #333; margin-top: 2px;">${pplxScore !== null ? pplxScore : '-'}</span>
               </div>
             </div>
           </div>
