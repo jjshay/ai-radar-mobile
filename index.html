@@ -2316,34 +2316,22 @@
       </div>
 
       <div class="sources-grid">
+        <div class="source-btn done" data-source="sheets" onclick="toggleSource('sheets')">
+          <div class="checkmark">✓</div>
+          <div class="icon"><img src="assets/newsapi.png" alt="Curated"></div>
+          <div class="name">AI Scored</div>
+          <div class="count">-</div>
+        </div>
         <div class="source-btn" data-source="newsapi" onclick="toggleSource('newsapi')">
           <div class="checkmark">✓</div>
           <div class="icon"><img src="assets/newsapi.png" alt="NewsAPI"></div>
-          <div class="name">NewsAPI</div>
-          <div class="count">-</div>
-        </div>
-        <div class="source-btn" data-source="newsdata" onclick="toggleSource('newsdata')">
-          <div class="checkmark">✓</div>
-          <div class="icon"><img src="assets/newsdata.png" alt="NewsData"></div>
-          <div class="name">NewsData</div>
-          <div class="count">-</div>
-        </div>
-        <div class="source-btn" data-source="perplexity" onclick="toggleSource('perplexity')">
-          <div class="checkmark">✓</div>
-          <div class="icon"><img src="assets/perplexity.png" alt="Perplexity"></div>
-          <div class="name">Perplexity</div>
-          <div class="count">-</div>
-        </div>
-        <div class="source-btn" data-source="grok" onclick="toggleSource('grok')">
-          <div class="checkmark">✓</div>
-          <div class="icon"><img src="logos/grok.png" alt="Grok"></div>
-          <div class="name">Grok</div>
+          <div class="name">Live News</div>
           <div class="count">-</div>
         </div>
       </div>
 
       <button class="fetch-all-btn" onclick="fetchAllSources()">
-        FETCH ALL SOURCES
+        LOAD ARTICLES
       </button>
 
     </div>
@@ -2950,8 +2938,13 @@
     let currentCardIndex = 0;
     let selectedArticle = null;
     let selectedLength = 'medium';
-    let selectedSources = new Set();
+    let selectedSources = new Set(['sheets']); // Default to curated articles
     let selectedTopic = 'artificial intelligence';
+
+    // Google Sheets - pre-scored articles (same source as desktop)
+    const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/11a-_IWhljPJHeKV8vdke-JiLmm_KCq-bedSceKB0kZI/export?format=csv&gid=5770604';
+    const SHEETS_CACHE_KEY = 'ai-radar-sheets-cache';
+    const SHEETS_CACHE_TTL = 10 * 60 * 1000; // 10 min cache
 
     // Global topic keywords for learning and display
     const topicKeywords = ['AI', 'GPT', 'OpenAI', 'Google', 'Microsoft', 'Apple', 'Tesla', 'Crypto', 'Startup', 'Enterprise', 'Cloud', 'Data', 'Robot', 'Quantum', 'Meta', 'Amazon', 'ChatGPT', 'Gemini', 'Claude', 'Machine Learning', 'Deep Learning', 'Neural', 'Nvidia', 'Anthropic'];
@@ -3182,9 +3175,9 @@
       const btn = document.querySelector('.fetch-all-btn');
       const count = selectedSources.size;
       if (count === 0) {
-        btn.textContent = 'FETCH ALL SOURCES';
+        btn.textContent = 'LOAD ARTICLES';
       } else {
-        btn.textContent = `FETCH ${count} SOURCE${count > 1 ? 'S' : ''}`;
+        btn.textContent = `LOAD ${count} SOURCE${count > 1 ? 'S' : ''}`;
       }
     }
 
@@ -3194,15 +3187,19 @@
       showScreen('home');
       // Reset fetch buttons
       document.querySelectorAll('.source-btn').forEach(btn => {
-        btn.classList.remove('fetching', 'done');
-        btn.querySelector('.count').textContent = '0';
+        btn.classList.remove('fetching');
+        // Keep 'sheets' as default selected
+        if (btn.dataset.source === 'sheets') {
+          btn.classList.add('done');
+        } else {
+          btn.classList.remove('done');
+        }
+        btn.querySelector('.count').textContent = '-';
       });
       const fetchBtn = document.querySelector('.fetch-all-btn');
       if (fetchBtn) {
         fetchBtn.disabled = false;
-        fetchBtn.textContent = selectedSources.size > 0
-          ? `FETCH ${selectedSources.size} SOURCE${selectedSources.size > 1 ? 'S' : ''}`
-          : 'FETCH ALL SOURCES';
+        fetchBtn.textContent = 'LOAD ARTICLES';
       }
     }
 
@@ -3240,6 +3237,105 @@
       } else if (screenId === 'generating') {
         resetAudioState();
       }
+    }
+
+    // ============================================
+    // GOOGLE SHEETS - PRE-SCORED ARTICLES
+    // ============================================
+    async function fetchFromSheets(topic) {
+      // Check cache first
+      try {
+        const cached = JSON.parse(localStorage.getItem(SHEETS_CACHE_KEY) || 'null');
+        if (cached && (Date.now() - cached.timestamp < SHEETS_CACHE_TTL)) {
+          console.log('Using cached Sheets data:', cached.articles.length, 'articles');
+          return filterByTopic(cached.articles, topic);
+        }
+      } catch (e) { /* cache miss */ }
+
+      // Fetch fresh from Google Sheets CSV
+      try {
+        const resp = await fetch(SHEETS_CSV_URL);
+        const csvText = await resp.text();
+        const rows = parseCSVRows(csvText);
+
+        const allArticles = rows.map((cols, idx) => {
+          // Parse by column position (headers are shifted in the sheet)
+          const avgScore = parseInt(cols[2]) || 0;
+          const title = (cols[4] || '').trim();
+          if (!title || avgScore < 10) return null;
+
+          return {
+            id: Date.now() + idx + Math.random(),
+            title: title,
+            url: (cols[5] || '').trim(),
+            source: (cols[6] || '').trim(),
+            date: (cols[3] || '').trim(),
+            words: parseInt(cols[22]) || 500,
+            image: null,
+            avgScore: avgScore,
+            scores: {
+              gpt: parseInt(cols[8]) || 0,
+              claude: parseInt(cols[9]) || 0,
+              gemini: parseInt(cols[10]) || 0,
+              grok: parseInt(cols[11]) || 0,
+              pplx: parseInt(cols[12]) || 0
+            },
+            rationales: {
+              gpt: cols[15] || '',
+              claude: cols[16] || '',
+              gemini: cols[17] || '',
+              grok: cols[18] || '',
+              pplx: cols[19] || ''
+            },
+            sentiment: avgScore >= 85 ? 'positive' : avgScore >= 60 ? 'neutral' : 'negative',
+            tags: avgScore >= 90 ? ['Top Article'] : avgScore >= 85 ? ['Trending'] : [],
+            aiScored: true,
+            fetchSource: 'sheets'
+          };
+        }).filter(Boolean);
+
+        // Cache for next time
+        localStorage.setItem(SHEETS_CACHE_KEY, JSON.stringify({
+          timestamp: Date.now(),
+          articles: allArticles
+        }));
+
+        console.log('Loaded', allArticles.length, 'articles from Sheets');
+        return filterByTopic(allArticles, topic);
+      } catch (e) {
+        console.error('Sheets fetch error:', e);
+        // Try cache even if expired
+        try {
+          const cached = JSON.parse(localStorage.getItem(SHEETS_CACHE_KEY) || 'null');
+          if (cached) return filterByTopic(cached.articles, topic);
+        } catch (e2) { /* no cache */ }
+        return [];
+      }
+    }
+
+    function parseCSVRows(csvText) {
+      const lines = csvText.split('\n');
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) { // skip header
+        if (lines[i].trim()) {
+          rows.push(parseCSVLine(lines[i]));
+        }
+      }
+      return rows;
+    }
+
+    function filterByTopic(articles, topic) {
+      if (!topic) return articles;
+      const keywords = topic.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      // Return all if no meaningful keywords, otherwise filter
+      if (keywords.length === 0) return articles;
+
+      const matched = articles.filter(a => {
+        const text = ((a.title || '') + ' ' + (a.source || '')).toLowerCase();
+        return keywords.some(kw => text.includes(kw));
+      });
+      // If filter is too aggressive, return all articles
+      return matched.length >= 3 ? matched : articles;
     }
 
     // ============================================
@@ -3516,54 +3612,88 @@
     async function fetchAllSources() {
       const btn = document.querySelector('.fetch-all-btn');
       btn.disabled = true;
-      btn.textContent = 'FETCHING...';
+      btn.textContent = 'LOADING...';
       scoringAborted = false;
-
-      // Clear previous articles to avoid stale data mixing in
       articles = [];
 
-      const allSources = ['newsapi', 'newsdata', 'perplexity', 'grok'];
-      const sources = selectedSources.size > 0 ? Array.from(selectedSources) : allSources;
+      const sources = selectedSources.size > 0 ? Array.from(selectedSources) : ['sheets'];
+      const useSheets = sources.includes('sheets');
+      const useNewsAPI = sources.includes('newsapi');
 
-      // Fetch all sources in parallel
-      await Promise.allSettled(sources.map(source => fetchSource(source)));
+      // Step 1: Load pre-scored articles from Google Sheets (instant)
+      if (useSheets) {
+        btn.textContent = 'LOADING CURATED...';
+        const sheetsBtn = document.querySelector('.source-btn[data-source="sheets"]');
+        if (sheetsBtn) sheetsBtn.classList.add('fetching');
+
+        const sheetArticles = await fetchFromSheets(selectedTopic);
+        articles = [...articles, ...sheetArticles];
+
+        if (sheetsBtn) {
+          sheetsBtn.classList.remove('fetching');
+          sheetsBtn.classList.add('done');
+          sheetsBtn.querySelector('.count').textContent = sheetArticles.length;
+        }
+        console.log('Sheets loaded:', sheetArticles.length, 'for topic:', selectedTopic);
+      }
+
+      // Step 2: Supplement with live NewsAPI (fast, topic-specific)
+      if (useNewsAPI) {
+        btn.textContent = 'FETCHING LIVE NEWS...';
+        try {
+          await fetchSource('newsapi');
+          // Score the live articles that don't have scores yet
+          const unscored = articles.filter(a => !a.aiScored);
+          if (unscored.length > 0) {
+            btn.textContent = 'SCORING LIVE ARTICLES...';
+            for (const a of unscored) {
+              const result = localScoreArticle(a);
+              a.scores = result.scores;
+              a.avgScore = result.avgScore;
+              a.sentiment = result.sentiment;
+              a.tags = result.tags;
+            }
+          }
+        } catch (e) {
+          console.error('NewsAPI fetch failed:', e);
+        }
+      }
+
+      if (articles.length === 0) {
+        btn.textContent = 'NO ARTICLES FOUND';
+        btn.disabled = false;
+        return;
+      }
 
       btn.textContent = `${articles.length} ARTICLES READY`;
 
-      // Brief pause then show scoring
-      await sleep(300);
-
-      // Show AI scoring animation screen
-      showScreen('scoring');
-
-      try {
-        // Race scoring against a 30s timeout
-        await Promise.race([
-          runAIScoring(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Scoring timeout')), 30000))
-        ]);
-      } catch (err) {
-        console.error('Scoring error/timeout:', err);
-        // Apply fallback scores to any unscored articles
-        articles.forEach(a => {
-          if (!a.scores) {
-            a.scores = {
-              gpt: Math.floor(Math.random() * 25) + 70,
-              claude: Math.floor(Math.random() * 25) + 70,
-              gemini: Math.floor(Math.random() * 25) + 70,
-              grok: Math.floor(Math.random() * 25) + 70,
-              pplx: Math.floor(Math.random() * 25) + 70
-            };
-          }
-          const s = a.scores;
-          if (!a.avgScore) a.avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
-          a.sentiment = a.sentiment || 'neutral';
-          a.tags = a.tags || [];
-        });
-      }
-
-      if (!scoringAborted) {
+      // Skip scoring screen for pre-scored articles - go straight to swipe
+      const allScored = articles.every(a => a.aiScored || a.scores);
+      if (allScored) {
+        await sleep(300);
         finishAndShowSwipe();
+      } else {
+        // Only show scoring screen if we have unscored articles
+        await sleep(300);
+        showScreen('scoring');
+        try {
+          await Promise.race([
+            runAIScoring(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Scoring timeout')), 30000))
+          ]);
+        } catch (err) {
+          console.error('Scoring error/timeout:', err);
+          articles.forEach(a => {
+            if (!a.scores) {
+              const result = localScoreArticle(a);
+              a.scores = result.scores;
+              a.avgScore = result.avgScore;
+              a.sentiment = result.sentiment;
+              a.tags = result.tags;
+            }
+          });
+        }
+        if (!scoringAborted) finishAndShowSwipe();
       }
     }
 
