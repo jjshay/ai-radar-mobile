@@ -2297,7 +2297,7 @@
           <option value="robotics automation">Robotics</option>
           <option value="merger acquisition private equity venture capital">M&A / PE / VC</option>
           <option value="culture entertainment society trends">Culture</option>
-          <option value="trending breaking news today">Surprise Me</option>
+          <option value="top news world today">Surprise Me</option>
         </select>
       </div>
 
@@ -3123,10 +3123,12 @@
       // Reset counts on source buttons
       document.querySelectorAll('.source-btn .count').forEach(el => { el.textContent = '-'; });
 
-      // Update button text to reflect the topic
+      // Update button text to reflect the topic (use display name, not query keywords)
       const btn = document.querySelector('.fetch-all-btn');
       if (btn && !btn.disabled) {
-        btn.textContent = topic === 'artificial intelligence' ? 'LOAD ARTICLES' : `LOAD "${topic.toUpperCase()}"`;
+        const dropdown = document.getElementById('topic-dropdown');
+        const displayName = dropdown.options[dropdown.selectedIndex].text;
+        btn.textContent = topic === 'artificial intelligence' ? 'LOAD ARTICLES' : `LOAD "${displayName.toUpperCase()}"`;
       }
     }
 
@@ -3597,7 +3599,9 @@
       // Step 2: Fetch from NewsAPI - always fetch if selected, or auto-fetch if sheets had no matches
       const needsLiveNews = useNewsAPI || (useSheets && articles.length === 0);
       if (needsLiveNews) {
-        btn.textContent = articles.length === 0 ? `SEARCHING "${selectedTopic.toUpperCase()}"...` : 'FETCHING LIVE NEWS...';
+        const dd = document.getElementById('topic-dropdown');
+        const topicName = dd.options[dd.selectedIndex].text;
+        btn.textContent = articles.length === 0 ? `SEARCHING "${topicName.toUpperCase()}"...` : 'FETCHING LIVE NEWS...';
         try {
           await fetchSource('newsapi');
           const newsapiBtn = document.querySelector('.source-btn[data-source="newsapi"]');
