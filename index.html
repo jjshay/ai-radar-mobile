@@ -5535,7 +5535,12 @@
       // Gamma URL
       let gammaUrl = result.gamma_url || status.gamma_url || '';
       if (gammaUrl === '0' || !gammaUrl.startsWith('http')) gammaUrl = '';
-      document.getElementById('gamma-link').href = gammaUrl || 'https://gamma.app';
+      if (!gammaUrl) {
+        // Build Gamma create URL with article as prompt
+        const gammaPrompt = `Create a professional presentation about: ${selectedArticle?.title || 'AI News'}. ${selectedArticle?.summary || selectedArticle?.description || ''}`.slice(0, 500);
+        gammaUrl = `https://gamma.app/generate?prompt=${encodeURIComponent(gammaPrompt)}`;
+      }
+      document.getElementById('gamma-link').href = gammaUrl;
 
       // Embed Gamma presentation if we have a URL
       const embedContainer = document.getElementById('gamma-embed-container');
