@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>AI Radar Mobile</title>
+  <title>AI Pulse</title>
   <style>
     /* CSS Variables - Dark theme with gold accents */
     :root {
@@ -75,6 +75,52 @@
     }
 
     /* ============================================
+       SPLASH SCREEN
+       ============================================ */
+    #screen-splash {
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+      background: var(--bg-primary);
+    }
+
+    #screen-splash .splash-logo {
+      width: 180px;
+      height: 180px;
+      margin-bottom: 30px;
+    }
+
+    #screen-splash .splash-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    #screen-splash .splash-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 3px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    #screen-splash .splash-by {
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .splash-fade-out {
+      animation: splashFadeOut 0.5s ease forwards;
+    }
+
+    @keyframes splashFadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    /* ============================================
        SCREEN 1: HOME
        ============================================ */
     #screen-home {
@@ -87,13 +133,13 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 50px;
+      gap: 8px;
+      margin-bottom: 30px;
     }
 
     .logo-icon {
-      width: 160px;
-      height: 160px;
+      width: 100px;
+      height: 100px;
       flex-shrink: 0;
     }
 
@@ -111,155 +157,6 @@
     }
 
     /* Source Buttons Grid */
-    .sources-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-      width: 100%;
-      max-width: 320px;
-      margin-bottom: 20px;
-    }
-
-    .source-btn {
-      background: rgba(255, 255, 255, 0.9);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      border-radius: 16px;
-      padding: 20px 15px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .source-btn .name,
-    .source-btn .count {
-      color: #1e3a5f;
-    }
-
-    .source-btn:active {
-      transform: scale(0.95);
-    }
-
-    .source-btn:hover {
-      border-color: var(--gold);
-      box-shadow: 0 0 25px rgba(212, 175, 55, 0.5);
-    }
-
-    .source-btn.selected {
-      background: var(--gold);
-      border-color: var(--gold);
-      box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
-    }
-
-    .source-btn.selected .name,
-    .source-btn.selected .count {
-      color: #1a1a1a;
-    }
-
-    .source-btn.fetching {
-      border-color: var(--linkedin-blue);
-      background: conic-gradient(
-        var(--linkedin-blue) var(--fill-progress, 0%),
-        var(--gold) var(--fill-progress, 0%)
-      );
-      animation: fill-corners 2.5s ease-in-out forwards;
-    }
-
-    .source-btn.fetching .name,
-    .source-btn.fetching .count {
-      color: #ffffff;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-    }
-
-    @keyframes fill-corners {
-      0% { --fill-progress: 0%; }
-      25% { --fill-progress: 25%; }
-      50% { --fill-progress: 50%; }
-      75% { --fill-progress: 75%; }
-      100% { --fill-progress: 100%; }
-    }
-
-    @property --fill-progress {
-      syntax: '<percentage>';
-      inherits: false;
-      initial-value: 0%;
-    }
-
-    .source-btn.done {
-      background: var(--linkedin-blue);
-      border-color: var(--linkedin-blue);
-      box-shadow: 0 0 20px rgba(10, 102, 194, 0.4);
-    }
-
-    .source-btn.done .name,
-    .source-btn.done .count {
-      color: #ffffff;
-    }
-
-    .source-btn.done .checkmark {
-      background: white;
-      color: var(--linkedin-blue);
-    }
-
-    .source-btn .checkmark {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 22px;
-      height: 22px;
-      background: var(--gold);
-      border-radius: 50%;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      color: var(--bg-primary);
-    }
-
-    .source-btn.selected .checkmark {
-      display: flex;
-    }
-
-    .source-btn {
-      position: relative;
-    }
-
-    @keyframes pulse-border {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
-      50% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
-    }
-
-    @keyframes pulse-text {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .source-btn .icon {
-      width: 40px;
-      height: 40px;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .source-btn .icon img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    .source-btn .name {
-      font-size: 13px;
-      font-weight: 600;
-      color: #1e3a5f;
-    }
-
-    .source-btn .count {
-      font-size: 11px;
-      color: #1e3a5f;
-      margin-top: 4px;
-    }
-
     /* Topic Selector */
     .topic-selector {
       width: 100%;
@@ -338,6 +235,35 @@
       opacity: 0.5;
     }
 
+    /* Topic Buttons */
+    .topic-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .topic-btn {
+      width: 100%;
+      padding: 18px 20px;
+      background: transparent;
+      border: 2px solid var(--gold);
+      border-radius: 16px;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--gold);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+    }
+
+    .topic-btn:active {
+      background: var(--gold);
+      color: #1a1a1a;
+      transform: scale(0.97);
+    }
+
     /* Favorites Button */
     .favorites-btn {
       width: 100%;
@@ -375,8 +301,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 15px 20px;
+      padding: 12px 20px;
       background: rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
     }
 
     .swipe-card-counter {
@@ -407,11 +334,12 @@
     /* Card Stack */
     .card-stack {
       flex: 1;
+      min-height: 0;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 10px 20px;
       overflow: hidden;
     }
 
@@ -420,7 +348,7 @@
       width: calc(100% - 40px);
       max-width: 340px;
       height: auto;
-      max-height: 420px;
+      max-height: min(380px, 55vh);
       background: white;
       border-radius: 16px;
       overflow: hidden;
@@ -467,11 +395,12 @@
     }
 
     .swipe-card .card-body {
-      padding: 12px 14px;
+      padding: 14px 16px;
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      gap: 6px;
     }
 
     .swipe-card .card-source {
@@ -481,15 +410,13 @@
       border-radius: 10px;
       font-size: 10px;
       color: #666;
-      margin-bottom: 6px;
       align-self: flex-start;
     }
 
     .swipe-card .card-title {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
-      line-height: 1.3;
-      margin-bottom: 6px;
+      line-height: 1.35;
       color: #1a1a1a;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -498,10 +425,9 @@
     }
 
     .swipe-card .card-summary {
-      font-size: 11px;
-      color: #666;
-      line-height: 1.4;
-      margin-bottom: 6px;
+      font-size: 12px;
+      color: #555;
+      line-height: 1.5;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
@@ -511,8 +437,7 @@
     .swipe-card .card-topics {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
-      margin-bottom: 8px;
+      gap: 5px;
     }
 
     .swipe-card .card-topic {
@@ -529,7 +454,6 @@
       gap: 12px;
       font-size: 11px;
       color: #666;
-      margin-bottom: 10px;
     }
 
     .swipe-card .card-meta span {
@@ -542,7 +466,6 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 10px;
     }
 
     .swipe-card .score-value {
@@ -814,10 +737,11 @@
 
     /* Swipe Hints */
     .swipe-hints {
-      padding: 20px;
+      padding: 8px 20px;
       display: flex;
       justify-content: space-around;
       background: var(--bg-secondary);
+      flex-shrink: 0;
     }
 
     .hint {
@@ -835,6 +759,36 @@
     .hint.not .arrow { color: var(--red); }
     .hint.delete .arrow { color: var(--text-muted); }
     .hint.post .arrow { color: var(--gold); }
+
+    /* LinkedIn Share Footer */
+    .swipe-footer {
+      padding: 10px 20px 12px;
+      background: var(--bg-secondary);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+    }
+
+    .linkedin-share-btn {
+      width: 100%;
+      padding: 14px 20px;
+      background: var(--gold);
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .linkedin-share-btn:hover,
+    .linkedin-share-btn:active {
+      background: var(--linkedin-blue);
+    }
 
     /* ============================================
        SCREEN 3: ARTICLE DETAIL
@@ -2398,45 +2352,31 @@
   <div class="app">
     <div class="offline-banner" id="offline-banner">Offline - showing cached articles</div>
 
+    <!-- SPLASH SCREEN -->
+    <div id="screen-splash" class="screen active">
+      <div class="splash-logo">
+        <img src="assets/logo-white.png" alt="AI Pulse">
+      </div>
+      <div class="splash-title">AI INTELLIGENCE SLIDE ENGINE</div>
+      <div class="splash-by">by AI Pulse</div>
+    </div>
+
     <!-- SCREEN 1: HOME -->
-    <div id="screen-home" class="screen active">
+    <div id="screen-home" class="screen">
       <div class="logo-container">
         <div class="logo-icon">
-          <img src="assets/logo-white.png" alt="AI Radar">
+          <img src="assets/logo-white.png" alt="AI Pulse">
         </div>
         <div class="logo-tagline">Intelligence Engine</div>
       </div>
 
-      <!-- Topic Dropdown - At Top -->
-      <div class="topic-selector">
-        <label>Search Topic</label>
-        <select id="topic-dropdown" onchange="setTopicAndFetchCounts(this.value)">
-          <option value="artificial intelligence" selected>AI & Technology</option>
-          <option value="robotics automation">Robotics</option>
-          <option value="merger acquisition private equity venture capital">M&A / PE / VC</option>
-          <option value="culture entertainment society trends">Culture</option>
-          <option value="top news world today">Surprise Me</option>
-        </select>
+      <div class="topic-buttons">
+        <button class="topic-btn" onclick="selectTopicAndGo('artificial intelligence')">AI & Technology</button>
+        <button class="topic-btn" onclick="selectTopicAndGo('robotics automation')">Robotics</button>
+        <button class="topic-btn" onclick="selectTopicAndGo('merger acquisition private equity venture capital')">M&A / PE / VC</button>
+        <button class="topic-btn" onclick="selectTopicAndGo('culture entertainment society trends')">Culture</button>
+        <button class="topic-btn" onclick="selectTopicAndGo('top news world today')">Surprise Me</button>
       </div>
-
-      <div class="sources-grid">
-        <div class="source-btn done" data-source="sheets" onclick="toggleSource('sheets')">
-          <div class="checkmark">✓</div>
-          <div class="icon"><img src="assets/sheets.png" alt="Curated"></div>
-          <div class="name">AI Scored</div>
-          <div class="count">-</div>
-        </div>
-        <div class="source-btn" data-source="newsapi" onclick="toggleSource('newsapi')">
-          <div class="checkmark">✓</div>
-          <div class="icon"><img src="assets/newsapi.png" alt="NewsAPI"></div>
-          <div class="name">Live News</div>
-          <div class="count">-</div>
-        </div>
-      </div>
-
-      <button class="fetch-all-btn" onclick="fetchAllSources()">
-        LOAD ARTICLES
-      </button>
 
     </div>
 
@@ -2517,6 +2457,12 @@
         <div class="hint create">
           <div class="arrow">CREATE →</div>
         </div>
+      </div>
+
+      <div class="swipe-footer">
+        <button class="linkedin-share-btn" onclick="shareToLinkedIn()">
+          Post to <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-left: 4px;"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </button>
       </div>
     </div>
 
@@ -2702,7 +2648,7 @@
         <div class="action-buttons">
           <a href="#" class="action-btn gamma" id="gamma-link" target="_blank">
             <span class="btn-icon">
-              <img src="assets/logo-white.png" alt="AI Radar" style="width: 28px; height: 28px; border-radius: 6px;">
+              <img src="assets/logo-white.png" alt="AI Pulse" style="width: 28px; height: 28px; border-radius: 6px;">
             </span>
             <span class="btn-label">Slides</span>
           </a>
@@ -2823,16 +2769,42 @@
     <!-- SCREEN: Card Generation -->
     <div id="screen-generating" class="screen" style="justify-content: center; align-items: center; padding: 20px; position: relative;">
       <button class="abort-btn" onclick="abortGeneration()" title="Cancel">✕</button>
-      <!-- AI Radar Logo -->
+      <!-- AI Pulse Logo -->
       <div class="gamma-highlight">
         <div class="gamma-logo-box">
-          <img src="assets/logo-white.png" alt="AI Radar">
+          <img src="assets/logo-white.png" alt="AI Pulse">
         </div>
       </div>
 
       <!-- Status -->
       <p id="generating-status" style="color: var(--text-muted); font-size: 12px; margin: 8px 0 4px;">Creating carousel...</p>
       <p class="gen-article-title" id="gen-article-title"></p>
+
+      <!-- Deep AI Scoring Row (shown during scoring phase) -->
+      <div id="deep-scoring-row" style="display: none; margin: 12px 0 8px;">
+        <div style="display: flex; gap: 16px; justify-content: center;">
+          <div class="deep-score-dot" id="ds-gpt" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.4s;">
+            <img src="logos/chatgpt.png" alt="GPT" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+            <span class="ds-score" style="font-size: 11px; margin-top: 3px; color: var(--text-muted); font-weight: 600;">--</span>
+          </div>
+          <div class="deep-score-dot" id="ds-claude" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.4s;">
+            <img src="logos/claude.png" alt="Claude" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+            <span class="ds-score" style="font-size: 11px; margin-top: 3px; color: var(--text-muted); font-weight: 600;">--</span>
+          </div>
+          <div class="deep-score-dot" id="ds-gemini" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.4s;">
+            <img src="logos/gemini.png" alt="Gemini" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+            <span class="ds-score" style="font-size: 11px; margin-top: 3px; color: var(--text-muted); font-weight: 600;">--</span>
+          </div>
+          <div class="deep-score-dot" id="ds-grok" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.4s;">
+            <img src="logos/grok.png" alt="Grok" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #333;">
+            <span class="ds-score" style="font-size: 11px; margin-top: 3px; color: var(--text-muted); font-weight: 600;">--</span>
+          </div>
+          <div class="deep-score-dot" id="ds-pplx" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.4s;">
+            <img src="logos/perplexity.png" alt="Pplx" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #fff;">
+            <span class="ds-score" style="font-size: 11px; margin-top: 3px; color: var(--text-muted); font-weight: 600;">--</span>
+          </div>
+        </div>
+      </div>
 
       <!-- Single Card with Step Number -->
       <div class="generation-cards">
@@ -2934,7 +2906,7 @@
 
       try {
         const quote = inspiringQuotes[Math.floor(Math.random() * inspiringQuotes.length)];
-        const outro = ' ... This AI Radar summary was brought to you by JJ Shay. Check out jjshay.com for other projects and over 70 free AI reports to download.';
+        const outro = ' ... This AI Pulse summary was brought to you by JJ Shay. Check out jjshay.com for other projects and over 70 free AI reports to download.';
         const fullSummary = (article.summary || article.description || '') + outro;
         const response = await fetch(`${API_BASE}/audio-summary`, {
           method: 'POST',
@@ -3048,17 +3020,17 @@
     }
 
     let articles = [];
-    let favorites = JSON.parse(localStorage.getItem('ai-radar-favorites') || '[]');
+    let favorites = JSON.parse(localStorage.getItem('ai-pulse-favorites') || '[]');
     let currentCardIndex = 0;
     let selectedArticle = null;
     let selectedLength = 'medium';
-    let selectedSources = new Set(['sheets']); // Default to curated articles
+    // Sources are always sheets + newsapi (no user selection)
     let selectedTopic = 'artificial intelligence';
 
     // Google Sheets - pre-scored articles (same source as desktop)
     const SHEETS_CSV_URL = '/api/sheets';
-    const SHEETS_CACHE_KEY = 'ai-radar-sheets-cache';
-    const SHEETS_CACHE_TTL = 10 * 60 * 1000; // 10 min cache
+    const SHEETS_CACHE_KEY = 'ai-pulse-sheets-cache';
+    const SHEETS_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hour cache
 
     // Global topic keywords for learning and display
     const topicKeywords = ['AI', 'GPT', 'OpenAI', 'Google', 'Microsoft', 'Apple', 'Tesla', 'Crypto', 'Startup', 'Enterprise', 'Cloud', 'Data', 'Robot', 'Quantum', 'Meta', 'Amazon', 'ChatGPT', 'Gemini', 'Claude', 'Machine Learning', 'Deep Learning', 'Neural', 'Nvidia', 'Anthropic'];
@@ -3070,7 +3042,7 @@
     const FEEDBACK_SHEET_GID = '5770604';
     const FEEDBACK_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCfVoFCmq4jTZrXn6mJ75hWemq99IeiHgtxqbFZ2RLx28VNCkAgZy_Rgv_jERe_vfX/exec';
 
-    let userFeedback = JSON.parse(localStorage.getItem('ai-radar-feedback') || '{"dislikedTopics":{},"dislikedSources":{},"dislikedKeywords":{},"likedTopics":{},"likedSources":{}}');
+    let userFeedback = JSON.parse(localStorage.getItem('ai-pulse-feedback') || '{"dislikedTopics":{},"dislikedSources":{},"dislikedKeywords":{},"likedTopics":{},"likedSources":{}}');
 
     // Sync feedback to Google Sheets
     async function syncFeedbackToSheets(action, article, topics, keywords) {
@@ -3121,7 +3093,7 @@
         userFeedback.dislikedKeywords[kw] = (userFeedback.dislikedKeywords[kw] || 0) + 1;
       });
 
-      localStorage.setItem('ai-radar-feedback', JSON.stringify(userFeedback));
+      localStorage.setItem('ai-pulse-feedback', JSON.stringify(userFeedback));
       console.log('Recorded dislike:', { topics, source: article.source, keywords: keywords.slice(0, 5) });
 
       // Sync to Google Sheets
@@ -3143,7 +3115,7 @@
         userFeedback.likedSources[article.source] = (userFeedback.likedSources[article.source] || 0) + 1;
       }
 
-      localStorage.setItem('ai-radar-feedback', JSON.stringify(userFeedback));
+      localStorage.setItem('ai-pulse-feedback', JSON.stringify(userFeedback));
       console.log('Recorded like:', { topics, source: article.source });
 
       // Sync to Google Sheets
@@ -3227,69 +3199,19 @@
 
 
     // ============================================
-    // SOURCE SELECTION
+    // TOPIC SELECTION
     // ============================================
-    function toggleSource(source) {
-      const btn = document.querySelector(`.source-btn[data-source="${source}"]`);
-      if (selectedSources.has(source)) {
-        selectedSources.delete(source);
-        btn.classList.remove('selected');
-      } else {
-        selectedSources.add(source);
-        btn.classList.add('selected');
-      }
-      updateFetchButton();
-    }
-
-    function setTopic(topic) {
+    function selectTopicAndGo(topic) {
       selectedTopic = topic;
-    }
-
-    async function setTopicAndFetchCounts(topic) {
-      selectedTopic = topic;
-
-      // Reset counts on source buttons
-      document.querySelectorAll('.source-btn .count').forEach(el => { el.textContent = '-'; });
-
-      // Update button text to reflect the topic (use display name, not query keywords)
-      const btn = document.querySelector('.fetch-all-btn');
-      if (btn && !btn.disabled) {
-        const dropdown = document.getElementById('topic-dropdown');
-        const displayName = dropdown.options[dropdown.selectedIndex].text;
-        btn.textContent = topic === 'artificial intelligence' ? 'LOAD ARTICLES' : `LOAD "${displayName.toUpperCase()}"`;
-      }
-    }
-
-    function updateFetchButton() {
-      const btn = document.querySelector('.fetch-all-btn');
-      const count = selectedSources.size;
-      if (count === 0) {
-        btn.textContent = 'LOAD ARTICLES';
-      } else {
-        btn.textContent = `LOAD ${count} SOURCE${count > 1 ? 'S' : ''}`;
-      }
+      // Show scoring screen immediately as loading indicator
+      showScreen('scoring');
+      fetchAllSources();
     }
 
     function goHome() {
       currentCardIndex = 0;
       articles = [];
       showScreen('home');
-      // Reset fetch buttons
-      document.querySelectorAll('.source-btn').forEach(btn => {
-        btn.classList.remove('fetching');
-        // Keep 'sheets' as default selected
-        if (btn.dataset.source === 'sheets') {
-          btn.classList.add('done');
-        } else {
-          btn.classList.remove('done');
-        }
-        btn.querySelector('.count').textContent = '-';
-      });
-      const fetchBtn = document.querySelector('.fetch-all-btn');
-      if (fetchBtn) {
-        fetchBtn.disabled = false;
-        fetchBtn.textContent = 'LOAD ARTICLES';
-      }
     }
 
     function abortGeneration() {
@@ -3350,10 +3272,18 @@
         const rows = parseCSVRows(csvText);
 
         const allArticles = rows.map((cols, idx) => {
-          // Parse by column position (headers are shifted in the sheet)
+          // Column mapping: 0=DATE ADDED, 2=AVG, 3=DATE, 4=TITLE, 5=LINK, 6=SOURCE, 7=AUTHOR
+          // 8=PROCESSED, 9=CLAUDE, 10=GEMINI, 11=GROK, 12=PPLX
+          // 15=GPT SAYS, 16=CLAUDE SAYS, 17=GEMINI SAYS, 18=GROK SAYS, 19=PPLX SAYS
+          // 21=GAMMA URL, 22=WORDS
           const avgScore = parseInt(cols[2]) || 0;
           const title = (cols[4] || '').trim();
           if (!title || avgScore < 10) return null;
+
+          const claudeScore = parseInt(cols[9]) || 0;
+          const geminiScore = parseInt(cols[10]) || 0;
+          const grokScore = parseInt(cols[11]) || 0;
+          const pplxScore = parseInt(cols[12]) || 0;
 
           return {
             id: Date.now() + idx + Math.random(),
@@ -3362,14 +3292,14 @@
             source: (cols[6] || '').trim(),
             date: (cols[3] || '').trim(),
             words: parseInt(cols[22]) || 500,
-            image: (cols[23] || '').trim() || null, // Check for image column, fallback to null
+            image: null,
             avgScore: avgScore,
             scores: {
-              gpt: parseInt(cols[8]) || 0,
-              claude: parseInt(cols[9]) || 0,
-              gemini: parseInt(cols[10]) || 0,
-              grok: parseInt(cols[11]) || 0,
-              pplx: parseInt(cols[12]) || 0
+              gpt: null,
+              claude: claudeScore,
+              gemini: geminiScore,
+              grok: grokScore,
+              pplx: pplxScore
             },
             rationales: {
               gpt: cols[15] || '',
@@ -3378,6 +3308,7 @@
               grok: cols[18] || '',
               pplx: cols[19] || ''
             },
+            gammaUrl: (cols[21] || '').trim() || null,
             sentiment: avgScore >= 85 ? 'positive' : avgScore >= 60 ? 'neutral' : 'negative',
             tags: avgScore >= 90 ? ['Top Article'] : avgScore >= 85 ? ['Trending'] : [],
             aiScored: true,
@@ -3385,8 +3316,8 @@
           };
         }).filter(Boolean);
 
-        // Filter out articles older than 30 days
-        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        // Filter out articles older than 90 days
+        const thirtyDaysAgo = Date.now() - (90 * 24 * 60 * 60 * 1000);
         const freshArticles = allArticles.filter(a => {
           if (!a.date) return true;
           const d = new Date(a.date);
@@ -3441,8 +3372,6 @@
     // HOME SCREEN - FETCH SOURCES
     // ============================================
     async function fetchSource(source) {
-      const btn = document.querySelector(`.source-btn[data-source="${source}"]`);
-      btn.classList.add('fetching');
 
       // API calls through Vercel serverless routes (no CORS issues)
       try {
@@ -3563,9 +3492,11 @@
 
         if (directArticles.length > 0) {
           articles = [...articles, ...directArticles];
-          btn.classList.remove('fetching');
-          btn.classList.add('done');
-          btn.querySelector('.count').textContent = directArticles.length;
+          if (btn) {
+            btn.classList.remove('fetching');
+            btn.classList.add('done');
+            btn.querySelector('.count').textContent = directArticles.length;
+          }
           console.log(`Got ${directArticles.length} articles directly from ${source}`);
           return directArticles.length;
         }
@@ -3573,14 +3504,8 @@
         console.log(`API call failed for ${source}:`, err);
       }
 
-      // Fallback to demo data
-      btn.classList.remove('fetching');
-      const fakeArticles = generateFakeArticles(source, 5);
-      articles = [...articles, ...fakeArticles];
-      btn.querySelector('.count').textContent = fakeArticles.length;
-      btn.classList.add('done');
-
-      return fakeArticles.length;
+      if (btn) btn.classList.remove('fetching');
+      return 0;
     }
 
     function formatDate(dateStr) {
@@ -3608,7 +3533,10 @@
           a.tags = result.tags;
         }
         const s = a.scores;
-        if (!a.avgScore) a.avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
+        if (!a.avgScore) {
+          const valid = [s.gpt, s.claude, s.gemini, s.grok, s.pplx].filter(v => v !== null && v !== undefined && v > 0);
+          a.avgScore = valid.length > 0 ? (valid.reduce((a,b) => a+b, 0) / valid.length).toFixed(1) : '0';
+        }
         a.sentiment = a.sentiment || 'neutral';
         a.tags = a.tags || [];
       });
@@ -3713,9 +3641,6 @@
     }
 
     async function fetchAllSources() {
-      const btn = document.querySelector('.fetch-all-btn');
-      btn.disabled = true;
-      btn.textContent = 'LOADING...';
       scoringAborted = false;
       articles = [];
 
@@ -3725,35 +3650,22 @@
         if (cached) {
           articles = cached.articles;
           document.getElementById('offline-banner').classList.add('show');
-          btn.textContent = `${articles.length} CACHED ARTICLES`;
           await sleep(300);
           finishAndShowSwipe();
           return;
         }
-        btn.textContent = 'NO CONNECTION';
-        btn.disabled = false;
+        goHome();
         return;
       }
       document.getElementById('offline-banner').classList.remove('show');
 
-      const sources = selectedSources.size > 0 ? Array.from(selectedSources) : ['sheets'];
-      const useSheets = sources.includes('sheets');
-      const useNewsAPI = sources.includes('newsapi');
+      const useSheets = true;
+      const useNewsAPI = true;
 
       // Step 1: Load pre-scored articles from Google Sheets (instant)
       if (useSheets) {
-        btn.textContent = 'LOADING CURATED...';
-        const sheetsBtn = document.querySelector('.source-btn[data-source="sheets"]');
-        if (sheetsBtn) sheetsBtn.classList.add('fetching');
-
         const sheetArticles = await fetchFromSheets(selectedTopic);
         articles = [...articles, ...sheetArticles];
-
-        if (sheetsBtn) {
-          sheetsBtn.classList.remove('fetching');
-          sheetsBtn.classList.add('done');
-          sheetsBtn.querySelector('.count').textContent = sheetArticles.length;
-        }
         console.log('Sheets loaded:', sheetArticles.length, 'for topic:', selectedTopic);
       }
 
@@ -3761,32 +3673,19 @@
       const isSurpriseMe = selectedTopic === 'top news world today';
       const needsLiveNews = useNewsAPI || isSurpriseMe || (useSheets && articles.length === 0);
       if (needsLiveNews) {
-        const dd = document.getElementById('topic-dropdown');
-        const topicName = dd.options[dd.selectedIndex].text;
-        btn.textContent = articles.length === 0 ? `SEARCHING "${topicName.toUpperCase()}"...` : 'FETCHING LIVE NEWS...';
         try {
           await fetchSource('newsapi');
-          const newsapiBtn = document.querySelector('.source-btn[data-source="newsapi"]');
-          if (newsapiBtn) {
-            newsapiBtn.classList.add('done');
-          }
-          // Live articles will be scored by Grok API on the scoring screen
-          const unscored = articles.filter(a => !a.aiScored);
-          if (unscored.length > 0) {
-            btn.textContent = `${unscored.length} ARTICLES TO SCORE...`;
-          }
         } catch (e) {
           console.error('NewsAPI fetch failed:', e);
         }
       }
 
       if (articles.length === 0) {
-        btn.textContent = 'NO ARTICLES FOUND';
-        btn.disabled = false;
+        goHome();
         return;
       }
 
-      btn.textContent = `${articles.length} ARTICLES READY`;
+      console.log(`${articles.length} articles ready`);
 
       // Skip scoring screen for pre-scored articles - go straight to swipe
       const allScored = articles.every(a => a.aiScored || a.scores);
@@ -3794,13 +3693,11 @@
         await sleep(300);
         finishAndShowSwipe();
       } else {
-        // Only show scoring screen if we have unscored articles
-        await sleep(300);
-        showScreen('scoring');
+        // Scoring screen is already showing (from selectTopicAndGo)
         try {
           await Promise.race([
             runAIScoring(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Scoring timeout')), 30000))
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Scoring timeout')), 12000))
           ]);
         } catch (err) {
           console.error('Scoring error/timeout:', err);
@@ -3895,7 +3792,7 @@
       }
 
       const totalToScore = toScoreIndices.length;
-      statusEl.textContent = totalToScore > 0 ? 'Analyzing articles with AI...' : 'All articles pre-scored!';
+      statusEl.textContent = totalToScore > 0 ? 'Quick-scoring with Grok...' : 'All articles pre-scored!';
       countEl.textContent = totalToScore > 0 ? `0 of ${totalToScore} articles scored` : `${articles.length} articles ready`;
 
       if (totalToScore === 0) {
@@ -3907,7 +3804,12 @@
         return;
       }
 
-      // Score unscored articles in batches of 5 using Grok API
+      // Light up Grok logo (single model for batch scoring)
+      const grokEl = document.getElementById('score-grok');
+      if (grokEl) { grokEl.style.opacity = '1'; grokEl.style.transform = 'scale(1.1)'; setTimeout(() => { if (grokEl) grokEl.style.transform = 'scale(1)'; }, 300); }
+      statusEl.textContent = 'Grok analyzing...';
+
+      // Score unscored articles in batches of 5 using Grok (single AI for quick scoring)
       const BATCH_SIZE = 5;
       let scored = 0;
 
@@ -3918,20 +3820,15 @@
         const batch = batchIndices.map(i => articles[i]);
         const articleList = batch.map((a, i) => `${i + 1}. "${a.title}" (${a.source})`).join('\n');
 
-        // Light up logos progressively
-        const progress = (batchStart + batch.length) / totalToScore;
-        const modelIdx = Math.min(Math.floor(progress * aiModels.length), 4);
-        statusEl.textContent = `${aiNames[aiModels[modelIdx]]} scoring...`;
-
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
           const resp = await fetch('/api/grok', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: 'grok-3-mini',
-              messages: [{ role: 'user', content: `Score these ${batch.length} articles about "${selectedTopic}" from 5 AI perspectives (0-100). Consider newsworthiness, depth, sourcing quality, and relevance to the topic. Return ONLY a JSON array.\n\n${articleList}\n\nReturn: [{"scores":{"gpt":82,"claude":78,"gemini":85,"grok":90,"pplx":80},"sentiment":"positive","tags":["Trending"]}] for each article in order.` }],
+              messages: [{ role: 'user', content: `Score these ${batch.length} articles about "${selectedTopic}" for LinkedIn shareability (0-100). Consider newsworthiness, depth, sourcing quality, and relevance. Return ONLY a JSON array.\n\n${articleList}\n\nReturn: [{"score":85,"sentiment":"positive","tags":["Trending"]}] for each article in order.` }],
               response_format: { type: 'json_object' },
               temperature: 0.3
             }),
@@ -3949,21 +3846,14 @@
             for (let j = 0; j < batch.length; j++) {
               const idx = batchIndices[j];
               const result = results[j];
-              if (result?.scores) {
-                articles[idx].scores = {
-                  gpt: clampScore(result.scores.gpt),
-                  claude: clampScore(result.scores.claude),
-                  gemini: clampScore(result.scores.gemini),
-                  grok: clampScore(result.scores.grok),
-                  pplx: clampScore(result.scores.pplx)
-                };
-                const s = articles[idx].scores;
-                articles[idx].avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
+              if (result && typeof result.score === 'number') {
+                const s = clampScore(result.score);
+                articles[idx].scores = { gpt: null, claude: null, gemini: null, grok: s, pplx: null };
+                articles[idx].avgScore = s;
                 articles[idx].sentiment = result.sentiment || 'neutral';
                 articles[idx].tags = Array.isArray(result.tags) ? result.tags : [];
                 articles[idx].aiScored = true;
               } else {
-                // Fallback for this article
                 const fallback = localScoreArticle(articles[idx]);
                 articles[idx].scores = fallback.scores;
                 articles[idx].avgScore = fallback.avgScore;
@@ -3973,7 +3863,6 @@
               scored++;
             }
           } else {
-            // API returned empty - fallback for batch
             batchIndices.forEach(idx => {
               const fallback = localScoreArticle(articles[idx]);
               articles[idx].scores = fallback.scores;
@@ -3995,177 +3884,301 @@
           });
         }
 
-        // Update UI
-        const logosToLight = Math.ceil(progress * aiModels.length);
-        for (let k = 0; k < logosToLight; k++) {
-          const el = document.getElementById(`score-${aiModels[k]}`);
-          if (el && el.style.opacity !== '1') {
-            el.style.opacity = '1';
-            el.style.transform = 'scale(1.1)';
-            setTimeout(() => el.style.transform = 'scale(1)', 200);
-          }
-        }
         countEl.textContent = `${scored} of ${totalToScore} articles scored`;
       }
 
-      // Ensure all logos lit
+      // Light up all logos to indicate ready for deep scoring on selection
       aiModels.forEach(ai => {
         const el = document.getElementById(`score-${ai}`);
-        if (el) {
-          el.style.opacity = '1';
-          el.style.transform = 'scale(1.1)';
-          setTimeout(() => el.style.transform = 'scale(1)', 200);
-        }
+        if (el) { el.style.opacity = '0.6'; }
       });
+      if (grokEl) grokEl.style.opacity = '1';
 
-      statusEl.textContent = 'Complete! Ranking articles...';
+      statusEl.textContent = 'Complete! Swipe right to score with all 5 AIs.';
       countEl.textContent = `${articles.length} articles scored`;
       await sleep(400);
     }
 
-    // Real AI scoring for a single selected article
-    async function runRealAIScoring(article) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const resp = await fetch('/api/grok', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'grok-3-mini',
-            messages: [{ role: 'user', content: `Score this article about "${selectedTopic}" from 5 AI perspectives (0-100). Return JSON only.\n\nTitle: "${article.title}"\nSummary: ${(article.summary || '').substring(0, 300)}\n\nReturn: {"scores":{"gpt":82,"claude":78,"gemini":85,"grok":90,"pplx":80},"sentiment":"positive","tags":["Trending"]}` }],
-            response_format: { type: 'json_object' },
-            temperature: 0.3
-          }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+    // Deep AI scoring — calls all 5 models in parallel
+    async function runDeepAIScoring(article) {
+      const prompt = `You are scoring a news article for social media virality and content quality in the "${selectedTopic}" industry. Score 0-100 and give a 1-sentence rationale.\n\nTitle: "${article.title}"\nSummary: ${(article.summary || '').substring(0, 400)}\n\nReturn ONLY valid JSON: {"score":82,"rationale":"One sentence why"}`;
 
-        const data = await resp.json();
-        if (data.choices?.[0]?.message?.content) {
-          let content = data.choices[0].message.content;
-          content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-          const parsed = JSON.parse(content);
-          if (parsed.scores) {
-            article.scores = {
-              gpt: clampScore(parsed.scores.gpt),
-              claude: clampScore(parsed.scores.claude),
-              gemini: clampScore(parsed.scores.gemini),
-              grok: clampScore(parsed.scores.grok),
-              pplx: clampScore(parsed.scores.pplx)
-            };
-            const s = article.scores;
-            article.avgScore = ((s.gpt + s.claude + s.gemini + s.grok + s.pplx) / 5).toFixed(1);
-            article.sentiment = parsed.sentiment || article.sentiment;
-            article.tags = Array.isArray(parsed.tags) ? parsed.tags : article.tags;
-            article.aiScored = true;
-            console.log('Real AI scoring complete for:', article.title, article.scores);
-          }
-        }
-      } catch (err) {
-        console.log('Real AI scoring failed, keeping local scores:', err.message);
-      }
-    }
-
-    function generateFakeArticles(source, count) {
-      const articles = [
+      const models = [
         {
-          title: 'OpenAI Announces GPT-5 Preview for Enterprise Customers',
-          summary: 'The next generation language model promises significant improvements in reasoning and code generation capabilities. Early testers report 40% better performance on complex multi-step tasks and near-human level understanding of nuanced instructions.',
-          image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=200&fit=crop',
-          rationales: {
-            gpt: 'Major AI milestone, high engagement expected',
-            claude: 'Significant industry impact, well-documented',
-            gemini: 'Competitive landscape shift, viral potential',
-            grok: 'Trending #1 on tech Twitter right now',
-            pplx: 'Confirmed by multiple tier-1 sources'
-          }
+          key: 'gpt',
+          endpoint: '/api/openai',
+          body: { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, temperature: 0.3 },
+          parse: data => { const c = data.choices?.[0]?.message?.content; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         },
         {
-          title: 'Apple Reveals New AI Features Coming to iOS 19',
-          summary: 'Siri gets a major upgrade with on-device LLM processing and new contextual awareness features. The update includes real-time translation, smart summarization, and predictive actions based on user habits.',
-          image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=200&fit=crop',
-          rationales: {
-            gpt: 'Mass market appeal, affects billions',
-            claude: 'Privacy-focused approach is newsworthy',
-            gemini: 'Strong visual content opportunity',
-            grok: 'Apple fans highly engaged on this',
-            pplx: 'Official Apple announcement verified'
-          }
+          key: 'claude',
+          endpoint: '/api/claude',
+          body: { model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: prompt }] },
+          parse: data => { const c = data.content?.[0]?.text; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         },
         {
-          title: 'Google DeepMind Achieves Breakthrough in Protein Folding',
-          summary: 'AlphaFold 3 can now predict protein interactions with unprecedented accuracy, accelerating drug discovery. Researchers say this could cut drug development timelines by years and save billions in R&D costs.',
-          image: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&h=200&fit=crop',
-          rationales: {
-            gpt: 'Scientific breakthrough with real-world impact',
-            claude: 'Healthcare implications are profound',
-            gemini: 'Google property, have insider context',
-            grok: 'Science community buzzing about this',
-            pplx: 'Peer-reviewed research backing claims'
-          }
+          key: 'gemini',
+          endpoint: '/api/gemini',
+          body: { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, responseMimeType: 'application/json' } },
+          parse: data => { const c = data.candidates?.[0]?.content?.parts?.[0]?.text; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         },
         {
-          title: 'Microsoft Copilot Now Available in All Office Apps',
-          summary: 'AI-powered assistance comes to Word, Excel, PowerPoint and Outlook for all Microsoft 365 subscribers. The rollout marks the largest enterprise AI deployment in history, touching 400M+ users.',
-          image: 'https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=400&h=200&fit=crop',
-          rationales: {
-            gpt: 'Enterprise AI adoption accelerating',
-            claude: 'Productivity implications significant',
-            gemini: 'Direct competitor move, important',
-            grok: 'Business Twitter loves productivity tools',
-            pplx: 'Microsoft official blog confirmed'
-          }
+          key: 'grok',
+          endpoint: '/api/grok',
+          body: { model: 'grok-3-mini', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, temperature: 0.3 },
+          parse: data => { const c = data.choices?.[0]?.message?.content; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         },
         {
-          title: 'Meta Launches New Open Source LLM for Developers',
-          summary: 'Llama 4 offers state-of-the-art performance with full commercial usage rights and no API costs. Benchmarks show it outperforms GPT-4 on coding tasks while being completely free to use.',
-          image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=200&fit=crop',
-          rationales: {
-            gpt: 'Open source AI is reshaping the industry',
-            claude: 'Democratization of AI is key theme',
-            gemini: 'Competitive threat assessment needed',
-            grok: 'Dev community extremely excited',
-            pplx: 'Benchmarks independently verified'
-          }
-        },
-        {
-          title: 'NVIDIA Reports Record Revenue from AI Chip Demand',
-          summary: 'Data center GPU sales surge 400% as companies race to build AI infrastructure. The company now holds 95% market share in AI training chips, with demand outpacing supply through 2025.',
-          image: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400&h=200&fit=crop',
-          rationales: {
-            gpt: 'Infrastructure story underlies all AI',
-            claude: 'Market dynamics worth analyzing',
-            gemini: 'Financial implications substantial',
-            grok: 'Stock traders very engaged on this',
-            pplx: 'SEC filings confirm numbers'
-          }
-        },
-        {
-          title: 'Amazon AWS Introduces New AI Training Services',
-          summary: 'Bedrock platform expands with custom model fine-tuning and new foundation model options. Enterprise customers can now train proprietary models on their own data with full privacy guarantees.',
-          image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=200&fit=crop',
-          rationales: {
-            gpt: 'Cloud AI competition heating up',
-            claude: 'Enterprise AI needs are evolving',
-            gemini: 'Multi-cloud strategy implications',
-            grok: 'AWS re:Invent always trends big',
-            pplx: 'AWS documentation confirms features'
-          }
-        },
-        {
-          title: 'Tesla FSD V13 Achieves Level 4 Autonomy Certification',
-          summary: 'Regulatory approval marks milestone for self-driving technology deployment at scale. Tesla vehicles can now operate without human supervision in approved geofenced areas across 12 US states.',
-          image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400&h=200&fit=crop',
-          rationales: {
-            gpt: 'Autonomous vehicles reaching inflection',
-            claude: 'Safety and regulatory angle important',
-            gemini: 'Transportation revolution underway',
-            grok: 'Elon content always goes viral',
-            pplx: 'NHTSA approval docs verified'
-          }
+          key: 'pplx',
+          endpoint: '/api/perplexity',
+          body: { model: 'sonar', messages: [{ role: 'user', content: prompt }], temperature: 0.3 },
+          parse: data => { const c = data.choices?.[0]?.message?.content; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         }
       ];
+
+      // Show the scoring row
+      const scoringRow = document.getElementById('deep-scoring-row');
+      if (scoringRow) scoringRow.style.display = 'block';
+
+      // Map key to ds-id
+      const idMap = { gpt: 'ds-gpt', claude: 'ds-claude', gemini: 'ds-gemini', grok: 'ds-grok', pplx: 'ds-pplx' };
+
+      // Initialize scores and rationales
+      if (!article.scores) article.scores = {};
+      if (!article.rationales) article.rationales = {};
+
+      // Helper: light up a dot with the score
+      function lightUpDot(key, score) {
+        const dot = document.getElementById(idMap[key]);
+        if (dot) {
+          dot.style.opacity = '1';
+          dot.style.transform = 'scale(1.15)';
+          setTimeout(() => { dot.style.transform = 'scale(1)'; }, 300);
+          const scoreSpan = dot.querySelector('.ds-score');
+          if (scoreSpan) {
+            scoreSpan.textContent = score;
+            scoreSpan.style.color = 'var(--gold)';
+          }
+        }
+      }
+
+      // Helper: call a single model with timeout
+      async function callModel(m) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        try {
+          const resp = await fetch(m.endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(m.body),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          const data = await resp.json();
+          const parsed = m.parse(data);
+          if (parsed && typeof parsed.score === 'number') {
+            const score = clampScore(parsed.score);
+            article.scores[m.key] = score;
+            article.rationales[m.key] = parsed.rationale || '';
+            lightUpDot(m.key, score);
+            console.log(`Deep score [${m.key}]:`, score, parsed.rationale);
+            return score;
+          }
+          throw new Error('No score in response');
+        } catch (err) {
+          clearTimeout(timeoutId);
+          // Fallback to heuristic
+          const fallback = article.scores[m.key] || clampScore(localScoreArticle(article).scores?.[m.key] || (70 + Math.floor(Math.random() * 15)));
+          article.scores[m.key] = fallback;
+          article.rationales[m.key] = 'Heuristic fallback';
+          lightUpDot(m.key, fallback);
+          console.log(`Deep score [${m.key}] fallback:`, fallback, err.message);
+          return fallback;
+        }
+      }
+
+      // Call all 5 in parallel
+      await Promise.allSettled(models.map(m => callModel(m)));
+
+      // Compute average
+      const s = article.scores;
+      const validDeep = [s.gpt, s.claude, s.gemini, s.grok, s.pplx].filter(v => v !== null && v !== undefined && v > 0);
+      article.avgScore = validDeep.length > 0 ? (validDeep.reduce((a,b) => a+b, 0) / validDeep.length).toFixed(1) : article.avgScore;
+      article.aiScored = true;
+      console.log('Deep AI scoring complete:', article.scores, 'avg:', article.avgScore);
+    }
+
+    if (false) {
+      const topicArticles_REMOVED = {
+        'artificial intelligence': [
+          {
+            title: 'OpenAI Announces GPT-5 Preview for Enterprise Customers',
+            summary: 'The next generation language model promises significant improvements in reasoning and code generation capabilities. Early testers report 40% better performance on complex multi-step tasks and near-human level understanding of nuanced instructions.',
+            image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Major AI milestone, high engagement expected', claude: 'Significant industry impact, well-documented', gemini: 'Competitive landscape shift, viral potential', grok: 'Trending #1 on tech Twitter right now', pplx: 'Confirmed by multiple tier-1 sources' }
+          },
+          {
+            title: 'Apple Reveals New AI Features Coming to iOS 19',
+            summary: 'Siri gets a major upgrade with on-device LLM processing and new contextual awareness features. The update includes real-time translation, smart summarization, and predictive actions based on user habits.',
+            image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Mass market appeal, affects billions', claude: 'Privacy-focused approach is newsworthy', gemini: 'Strong visual content opportunity', grok: 'Apple fans highly engaged on this', pplx: 'Official Apple announcement verified' }
+          },
+          {
+            title: 'Google DeepMind Achieves Breakthrough in Protein Folding',
+            summary: 'AlphaFold 3 can now predict protein interactions with unprecedented accuracy, accelerating drug discovery. Researchers say this could cut drug development timelines by years and save billions in R&D costs.',
+            image: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Scientific breakthrough with real-world impact', claude: 'Healthcare implications are profound', gemini: 'Google property, have insider context', grok: 'Science community buzzing about this', pplx: 'Peer-reviewed research backing claims' }
+          },
+          {
+            title: 'Microsoft Copilot Now Available in All Office Apps',
+            summary: 'AI-powered assistance comes to Word, Excel, PowerPoint and Outlook for all Microsoft 365 subscribers. The rollout marks the largest enterprise AI deployment in history, touching 400M+ users.',
+            image: 'https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Enterprise AI adoption accelerating', claude: 'Productivity implications significant', gemini: 'Direct competitor move, important', grok: 'Business Twitter loves productivity tools', pplx: 'Microsoft official blog confirmed' }
+          },
+          {
+            title: 'Meta Launches New Open Source LLM for Developers',
+            summary: 'Llama 4 offers state-of-the-art performance with full commercial usage rights and no API costs. Benchmarks show it outperforms GPT-4 on coding tasks while being completely free to use.',
+            image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Open source AI is reshaping the industry', claude: 'Democratization of AI is key theme', gemini: 'Competitive threat assessment needed', grok: 'Dev community extremely excited', pplx: 'Benchmarks independently verified' }
+          },
+          {
+            title: 'NVIDIA Reports Record Revenue from AI Chip Demand',
+            summary: 'Data center GPU sales surge 400% as companies race to build AI infrastructure. The company now holds 95% market share in AI training chips, with demand outpacing supply through 2025.',
+            image: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Infrastructure story underlies all AI', claude: 'Market dynamics worth analyzing', gemini: 'Financial implications substantial', grok: 'Stock traders very engaged on this', pplx: 'SEC filings confirm numbers' }
+          }
+        ],
+        'robotics automation': [
+          {
+            title: 'Boston Dynamics Unveils Next-Gen Atlas Humanoid Robot',
+            summary: 'The fully electric Atlas can now perform complex warehouse tasks autonomously, stacking boxes and navigating unstructured environments. Commercial deployment begins Q3 with Hyundai manufacturing partners.',
+            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Humanoid robotics reaching commercial viability', claude: 'Labor market implications are significant', gemini: 'Visual demo content is compelling', grok: 'Robotics community highly engaged', pplx: 'Official Boston Dynamics press release confirmed' }
+          },
+          {
+            title: 'Figure AI Raises $1.5B to Scale Humanoid Robot Production',
+            summary: 'The startup plans to deploy its Figure 02 robots in BMW factories by end of year. The robots can learn new tasks from video demonstrations, drastically reducing programming time for industrial applications.',
+            image: 'https://images.unsplash.com/photo-1563207153-f403bf289096?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Massive funding round signals market confidence', claude: 'Manufacturing automation is accelerating', gemini: 'Learning-from-video approach is novel', grok: 'Figure demos going viral on social', pplx: 'SEC filing confirms funding details' }
+          },
+          {
+            title: 'Amazon Deploys 750,000 Robots Across Fulfillment Centers',
+            summary: 'New Sequoia robotic system cuts order processing time by 25% while working alongside human employees. Amazon says the robots handle repetitive tasks, allowing workers to focus on complex problem-solving roles.',
+            image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Largest warehouse automation deployment ever', claude: 'Worker displacement vs augmentation debate', gemini: 'Supply chain efficiency gains quantifiable', grok: 'Amazon logistics always trends', pplx: 'Amazon earnings call confirmed numbers' }
+          },
+          {
+            title: 'China Surpasses Japan as World\'s Largest Industrial Robot Market',
+            summary: 'Chinese factories installed over 290,000 new industrial robots last year, driven by aggressive automation goals in the 5-year plan. The shift is reshaping global manufacturing competitiveness.',
+            image: 'https://images.unsplash.com/photo-1537462715315-f5e16609736d?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Geopolitical implications for manufacturing', claude: 'Economic shift worth deep analysis', gemini: 'Data-rich story with clear trends', grok: 'Trade policy angles getting attention', pplx: 'IFR World Robotics Report data verified' }
+          },
+          {
+            title: 'Surgical Robots Now Perform 80% of Prostate Procedures in US',
+            summary: 'Intuitive Surgical\'s da Vinci systems have become the standard of care, with studies showing faster recovery and fewer complications. Next-gen Ion platform expands into lung biopsy procedures.',
+            image: 'https://images.unsplash.com/photo-1581093458791-9d42e3c7e117?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Medical robotics hitting mainstream adoption', claude: 'Patient outcome data is compelling', gemini: 'Healthcare transformation story', grok: 'Medical community sharing outcomes', pplx: 'Clinical trial data independently reviewed' }
+          }
+        ],
+        'merger acquisition private equity venture capital': [
+          {
+            title: 'Broadcom Completes $69B Acquisition of VMware',
+            summary: 'The largest tech deal of the decade reshapes the enterprise software landscape. Broadcom plans to restructure VMware into four divisions focused on cloud, networking, security, and edge computing.',
+            image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Landmark M&A deal reshaping enterprise tech', claude: 'Integration strategy will be closely watched', gemini: 'Customer impact analysis needed', grok: 'IT admins very vocal about changes', pplx: 'SEC filings and FTC approval docs verified' }
+          },
+          {
+            title: 'Sequoia Capital Splits Into Three Independent Firms',
+            summary: 'The legendary VC firm separates its US, China, and India operations into fully independent entities. The move reflects growing geopolitical tensions and regulatory pressures on cross-border investment.',
+            image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=200&fit=crop',
+            rationales: { gpt: 'VC industry structural shift', claude: 'Geopolitical implications for tech investment', gemini: 'Portfolio company impact assessment', grok: 'Startup founders discussing implications', pplx: 'Sequoia official announcement confirmed' }
+          },
+          {
+            title: 'PE Firms Pour $42B Into AI Infrastructure Startups in Q1',
+            summary: 'Private equity is making record bets on data center companies, chip designers, and AI tooling platforms. Blackstone, KKR, and Apollo lead the charge as AI compute demand outstrips supply.',
+            image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400&h=200&fit=crop',
+            rationales: { gpt: 'PE pivot to AI infrastructure is massive', claude: 'Capital allocation shift worth tracking', gemini: 'Deal flow data shows clear trend', grok: 'Finance Twitter analyzing every deal', pplx: 'PitchBook data independently verified' }
+          },
+          {
+            title: 'Adobe Abandons $20B Figma Acquisition After Regulatory Block',
+            summary: 'EU and UK regulators cited competition concerns in the design tool market. Figma returns to independence with a $1B breakup fee and renewed IPO speculation for late 2025.',
+            image: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Regulatory landscape changing for tech M&A', claude: 'Antitrust precedent has broad implications', gemini: 'Design tool market dynamics shifting', grok: 'Designers celebrating the outcome', pplx: 'EU Commission ruling documents reviewed' }
+          },
+          {
+            title: 'SoftBank Vision Fund Reports First Profit in Three Years',
+            summary: 'Masayoshi Son\'s investment vehicle swings to $5.4B profit driven by ARM Holdings IPO and recovering tech valuations. The fund signals renewed appetite for large-scale AI and robotics investments.',
+            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=200&fit=crop',
+            rationales: { gpt: 'SoftBank turnaround signals market recovery', claude: 'Investment thesis evolution worth studying', gemini: 'ARM IPO catalyst well documented', grok: 'Masa Son memes trending again', pplx: 'SoftBank earnings report data confirmed' }
+          }
+        ],
+        'culture entertainment society trends': [
+          {
+            title: 'AI-Generated Music Tops Billboard Charts for First Time',
+            summary: 'A track created with Suno AI reaches #3 on the Hot 100, sparking intense debate about creativity and copyright. Major labels are split between embracing and fighting the technology.',
+            image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Cultural milestone in AI creativity', claude: 'Copyright and ethics debate is crucial', gemini: 'Music industry disruption accelerating', grok: 'Musicians and fans deeply divided', pplx: 'Billboard chart data independently verified' }
+          },
+          {
+            title: 'Gen Z Abandons Traditional Social Media for AI Companions',
+            summary: 'Character.ai and Replika see 300% user growth as young adults prefer AI chatbots over human social feeds. Psychologists raise concerns about impact on real-world relationship development.',
+            image: 'https://images.unsplash.com/photo-1516251193007-45ef944ab0c6?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Generational shift in social behavior', claude: 'Mental health implications need attention', gemini: 'Usage data tells compelling story', grok: 'Gen Z discourse dominating timelines', pplx: 'App Annie download data confirmed' }
+          },
+          {
+            title: 'Hollywood Writers Strike Leads to New AI Content Guidelines',
+            summary: 'SAG-AFTRA and studios agree on landmark rules governing AI use in film and television production. The deal allows AI as a tool but requires human creative oversight and fair compensation structures.',
+            image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Labor vs technology template for all industries', claude: 'Regulatory framework worth analyzing', gemini: 'Entertainment industry transformation', grok: 'Creators sharing strong opinions', pplx: 'Contract details verified by Variety' }
+          },
+          {
+            title: 'Remote Work Permanently Reshapes Urban Real Estate Markets',
+            summary: 'Office vacancy rates hit 20% in major US cities as companies settle on hybrid models. Downtown corridors see conversion boom with former office towers becoming residential and mixed-use spaces.',
+            image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Permanent shift in how we work and live', claude: 'Economic ripple effects are broad', gemini: 'Data visualization opportunity', grok: 'Work-from-home debate never stops', pplx: 'CBRE vacancy data independently confirmed' }
+          },
+          {
+            title: 'Global Streaming Wars Enter New Phase as Netflix Adds Live Sports',
+            summary: 'Netflix secures NFL and WWE deals while Disney+ and Amazon Prime compete for Premier League rights. The bundling era begins as consumers face subscription fatigue with 8+ services.',
+            image: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Media landscape consolidation accelerating', claude: 'Consumer behavior shift is data-rich', gemini: 'Competitive dynamics worth mapping', grok: 'Sports fans very engaged on this', pplx: 'Deal terms confirmed by multiple outlets' }
+          }
+        ],
+        'top news world today': [
+          {
+            title: 'Global Climate Summit Produces Binding Emissions Agreement',
+            summary: 'Over 190 nations commit to 50% emissions reduction by 2035 with enforceable penalties. The deal includes a $200B annual fund for developing nations to transition to clean energy.',
+            image: 'https://images.unsplash.com/photo-1569163139394-de4e5f43e5ca?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Historic global policy agreement', claude: 'Enforcement mechanisms are novel', gemini: 'Data-rich policy story', grok: 'Climate debate trending worldwide', pplx: 'UN official documents confirmed' }
+          },
+          {
+            title: 'SpaceX Starship Completes First Successful Orbital Flight',
+            summary: 'The massive rocket achieves orbit and lands both stages, marking a new era in space transportation. NASA confirms Starship will carry crew to the Moon by 2026 under the Artemis program.',
+            image: 'https://images.unsplash.com/photo-1516849841032-87cbac4d88f7?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Space exploration milestone', claude: 'Engineering achievement is remarkable', gemini: 'Visual content is spectacular', grok: 'Space community celebrating', pplx: 'NASA and FAA reports verified' }
+          },
+          {
+            title: 'WHO Declares New Pandemic Preparedness Framework',
+            summary: 'A global treaty establishes rapid response protocols and equitable vaccine distribution. The agreement ensures developing nations receive treatments within 90 days of any future outbreak declaration.',
+            image: 'https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Global health infrastructure reform', claude: 'Equity provisions are groundbreaking', gemini: 'Policy implications are far-reaching', grok: 'Health policy discussion very active', pplx: 'WHO official treaty text reviewed' }
+          },
+          {
+            title: 'India Becomes World\'s Third Largest Economy by GDP',
+            summary: 'Surpassing Japan, India\'s $4.5T economy reflects decades of tech sector growth and demographic advantage. Analysts predict India could reach #2 by 2035 with continued reform momentum.',
+            image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Economic power shift of global significance', claude: 'Demographic and policy analysis rich', gemini: 'Data storytelling opportunity', grok: 'Indian tech community celebrating', pplx: 'IMF and World Bank data confirmed' }
+          },
+          {
+            title: 'Quantum Computing Achieves Error Correction Breakthrough',
+            summary: 'Google and IBM independently demonstrate fault-tolerant quantum operations, clearing the biggest hurdle to practical quantum computing. Experts say commercial applications could arrive within 5 years.',
+            image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=200&fit=crop',
+            rationales: { gpt: 'Technology breakthrough with vast implications', claude: 'Scientific rigor of claims worth examining', gemini: 'Computing paradigm shift underway', grok: 'Physics community very excited', pplx: 'Nature and Science publications verified' }
+          }
+        ]
+      };
+
+      const articles = topicArticles[selectedTopic] || topicArticles['artificial intelligence'];
 
       const dates = ['Today', 'Yesterday', '2 days ago', 'Jan 10', 'Jan 9', 'Jan 8'];
       const pages = [2, 3, 4, 5, 6, 7];
@@ -4218,7 +4231,7 @@
             <div style="font-size: 48px; margin-bottom: 12px;">📭</div>
             <h3 style="color: var(--gold); margin-bottom: 8px;">${totalNum === 0 ? 'No articles found' : 'All done!'}</h3>
             <p style="font-size: 13px; line-height: 1.4;">${totalNum === 0 ? 'Try a different topic or fetch more sources.' : `You've reviewed all ${totalNum} articles.`}</p>
-            <button onclick="goHome()" style="margin-top: 16px; background: var(--gold); color: var(--bg-primary); border: none; padding: 10px 24px; border-radius: 20px; font-weight: 600; cursor: pointer;">← Back to Sources</button>
+            <button onclick="goHome()" style="margin-top: 16px; background: var(--gold); color: var(--bg-primary); border: none; padding: 10px 24px; border-radius: 20px; font-weight: 600; cursor: pointer;">← Back to Topics</button>
           </div>
         `;
         document.getElementById('swipe-card-counter').innerHTML =
@@ -4589,7 +4602,7 @@
     function addToFavorites(article) {
       if (!favorites.find(f => f.id === article.id)) {
         favorites.unshift(article);
-        localStorage.setItem('ai-radar-favorites', JSON.stringify(favorites));
+        localStorage.setItem('ai-pulse-favorites', JSON.stringify(favorites));
         updateFavCount();
       }
     }
@@ -4599,7 +4612,7 @@
     }
 
     // SAVE FOR LATER
-    let savedForLater = JSON.parse(localStorage.getItem('ai-radar-saved') || '[]');
+    let savedForLater = JSON.parse(localStorage.getItem('ai-pulse-saved') || '[]');
 
     function addToSavedForLater(article) {
       if (!savedForLater.find(s => s.id === article.id)) {
@@ -4607,7 +4620,7 @@
           ...article,
           savedAt: new Date().toISOString()
         });
-        localStorage.setItem('ai-radar-saved', JSON.stringify(savedForLater));
+        localStorage.setItem('ai-pulse-saved', JSON.stringify(savedForLater));
         updateSavedCount();
       }
     }
@@ -4629,14 +4642,14 @@
         savedForLater.unshift({ ...article, savedAt: new Date().toISOString() });
         showToast('Saved!');
       }
-      localStorage.setItem('ai-radar-saved', JSON.stringify(savedForLater));
+      localStorage.setItem('ai-pulse-saved', JSON.stringify(savedForLater));
       updateSavedCount();
     }
 
     async function shareArticle(article) {
       const shareData = {
         title: article.title,
-        text: `${article.title} - AI Radar Score: ${Math.round(article.avgScore)}%`,
+        text: `${article.title} - AI Pulse Score: ${Math.round(article.avgScore)}%`,
         url: article.url || ''
       };
       if (navigator.share) {
@@ -4657,10 +4670,20 @@
       }
     }
 
+    function shareToLinkedIn() {
+      const article = articles[currentCardIndex];
+      if (!article || !article.url) {
+        showToast('No article to share');
+        return;
+      }
+      const url = encodeURIComponent(article.url);
+      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank');
+    }
+
     // ============================================
     // OFFLINE CACHE
     // ============================================
-    const OFFLINE_CACHE_KEY = 'ai-radar-offline-cache';
+    const OFFLINE_CACHE_KEY = 'ai-pulse-offline-cache';
 
     function cacheArticlesOffline() {
       try {
@@ -4746,23 +4769,26 @@
       document.getElementById('modal-pages').textContent = `${article.pages || 3} pages`;
       document.getElementById('modal-description').textContent = article.summary;
 
-      // Compute individual scores
-      const mGpt = Math.round(article.scores?.gpt || 80);
-      const mClaude = Math.round(article.scores?.claude || 80);
-      const mGemini = Math.round(article.scores?.gemini || 80);
-      const mGrok = Math.round(article.scores?.grok || 80);
-      const mPplx = Math.round(article.scores?.pplx || 80);
-      const mAvg = Math.round((mGpt + mClaude + mGemini + mGrok + mPplx) / 5);
+      // Compute individual scores - show only models that have scored
+      const scoreEntries = [
+        { key: 'gpt', name: 'GPT', score: article.scores?.gpt, rationale: article.rationales?.gpt },
+        { key: 'claude', name: 'Claude', score: article.scores?.claude, rationale: article.rationales?.claude },
+        { key: 'gemini', name: 'Gemini', score: article.scores?.gemini, rationale: article.rationales?.gemini },
+        { key: 'grok', name: 'Grok', score: article.scores?.grok, rationale: article.rationales?.grok },
+        { key: 'pplx', name: 'Perplexity', score: article.scores?.pplx, rationale: article.rationales?.pplx }
+      ];
+      const scoredEntries = scoreEntries.filter(e => e.score !== null && e.score !== undefined && e.score > 0);
+      const mAvg = scoredEntries.length > 0 ? Math.round(scoredEntries.reduce((a, e) => a + e.score, 0) / scoredEntries.length) : Math.round(parseFloat(article.avgScore) || 0);
       document.getElementById('modal-score').textContent = mAvg + '%';
 
-      // Generate AI consensus text - each on its own line (scores as percentages)
-      const consensusTexts = [
-        `<strong>GPT</strong> (${mGpt}%): ${article.rationales?.gpt || 'High relevance score'}`,
-        `<strong>Claude</strong> (${mClaude}%): ${article.rationales?.claude || 'Well-sourced content'}`,
-        `<strong>Gemini</strong> (${mGemini}%): ${article.rationales?.gemini || 'Good engagement potential'}`,
-        `<strong>Grok</strong> (${mGrok}%): ${article.rationales?.grok || 'Trending topic'}`,
-        `<strong>Perplexity</strong> (${mPplx}%): ${article.rationales?.pplx || 'Multiple sources verified'}`
-      ];
+      // Generate AI consensus text - only show models that have actually scored
+      const consensusTexts = scoredEntries.map(e =>
+        `<strong>${e.name}</strong> (${Math.round(e.score)}%): ${e.rationale || 'Score available'}`
+      );
+      if (scoredEntries.length < 5) {
+        const unscoredNames = scoreEntries.filter(e => !e.score).map(e => e.name).join(', ');
+        consensusTexts.push(`<em style="color:var(--text-muted)">Swipe right to score with ${unscoredNames}</em>`);
+      }
       document.getElementById('modal-consensus').innerHTML = consensusTexts.join('<br>');
 
       modal.classList.add('show');
@@ -4885,13 +4911,24 @@
       const config = CARD_CONFIGS[length];
       console.log('Starting generation with config:', length, config);
 
-      // Run real AI scoring on the selected article in background
-      if (selectedArticle && !selectedArticle.aiScored) {
-        runRealAIScoring(selectedArticle);
-      }
-
       // Show generating screen
       showScreen('generating');
+
+      // Set up initial UI
+      document.getElementById('step-num').textContent = '1';
+      document.getElementById('step-total').textContent = `of ${config.count}`;
+      document.getElementById('gen-step-description').textContent = 'Scoring with 5 AI models...';
+      document.getElementById('generating-status').textContent = 'Scoring with 5 AI models...';
+      document.getElementById('gen-article-title').textContent = selectedArticle?.title || '';
+
+      // Await deep AI scoring before proceeding to Gamma
+      if (selectedArticle && !selectedArticle.aiScored) {
+        await runDeepAIScoring(selectedArticle);
+      }
+
+      // Update status now that scoring is done
+      document.getElementById('generating-status').textContent = 'Creating carousel...';
+      document.getElementById('gen-step-description').textContent = config.steps[0]?.step || 'Starting...';
 
       // Lazy load audio summary after a few seconds
       setTimeout(() => {
@@ -4901,13 +4938,6 @@
           generateAudioSummary(selectedArticle);
         }
       }, 3000);
-
-      // Set up single card display
-      document.getElementById('step-num').textContent = '1';
-      document.getElementById('step-total').textContent = `of ${config.count}`;
-      document.getElementById('gen-step-description').textContent = config.steps[0]?.step || 'Starting...';
-      document.getElementById('generating-status').textContent = 'Creating carousel...';
-      document.getElementById('gen-article-title').textContent = selectedArticle?.title || '';
 
       // Reset progress
       document.getElementById('gen-progress-fill').style.width = '0%';
@@ -4924,7 +4954,7 @@
             summary: selectedArticle.summary || selectedArticle.description || '',
             source: selectedArticle.source || '',
             link: selectedArticle.link || selectedArticle.url || '',
-            avg_score: selectedArticle.avg_score || 85,
+            avg_score: selectedArticle.avgScore || selectedArticle.avg_score || 85,
             preview_only: true  // Generate but don't post - let user review first
           })
         });
@@ -5258,7 +5288,7 @@
 
     function deleteSavedArticle(id) {
       savedForLater = savedForLater.filter(a => a.id !== id);
-      localStorage.setItem('ai-radar-saved', JSON.stringify(savedForLater));
+      localStorage.setItem('ai-pulse-saved', JSON.stringify(savedForLater));
       updateSavedCount();
       renderFavorites();
       showToast('Removed');
@@ -5268,7 +5298,7 @@
       if (savedForLater.length === 0) return;
       if (confirm('Clear all saved articles?')) {
         savedForLater = [];
-        localStorage.setItem('ai-radar-saved', JSON.stringify(savedForLater));
+        localStorage.setItem('ai-pulse-saved', JSON.stringify(savedForLater));
         updateSavedCount();
         renderFavorites();
         showToast('All cleared');
@@ -5404,7 +5434,7 @@
           } else if (s.text) {
             body = s.text;
           } else if (s.status === 'complete') {
-            body = '✓ Generated by AI Radar';
+            body = '✓ Generated by AI Pulse';
           } else {
             body = 'Processing...';
           }
@@ -5634,8 +5664,14 @@
     // ============================================
     updateSavedCount();
 
-    // Auto-fetch counts for default topic on load
-    setTopicAndFetchCounts(selectedTopic);
+    // Splash screen → topic selection after 2 seconds
+    setTimeout(() => {
+      const splash = document.getElementById('screen-splash');
+      splash.classList.add('splash-fade-out');
+      setTimeout(() => {
+        showScreen('home');
+      }, 500);
+    }, 2000);
   </script>
 </body>
 </html>

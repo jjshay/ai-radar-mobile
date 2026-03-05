@@ -1,1 +1,4 @@
 .vercel
+.env*.local
+radar-build/
+.DS_Store

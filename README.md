@@ -1,4 +1,4 @@
-# AI Radar - Mobile-First Content Discovery Platform
+# AI Pulse - Mobile-First Content Discovery Platform
 
 A swipe-based mobile app that helps users discover AI news, generate LinkedIn carousels, and interact with content through voice AI.
 
@@ -114,13 +114,13 @@ The app learns user preferences over time:
 ## Project Structure
 
 ```
-ai-radar-mobile/
+ai-pulse/
 ├── index.html          # Main app (single-page application)
 ├── vercel.json         # Vercel deployment config
 ├── assets/             # Images and icons
 └── logos/              # Source logos (TechCrunch, etc.)
 
-ai-radar-backend/
+ai-pulse-backend/
 ├── simple_server.py    # Flask API server
 ├── requirements.txt    # Python dependencies
 ├── Procfile           # Railway start command
