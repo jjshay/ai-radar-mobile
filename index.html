@@ -3308,7 +3308,7 @@
               grok: cols[18] || '',
               pplx: cols[19] || ''
             },
-            gammaUrl: (cols[21] || '').trim() || null,
+            gammaUrl: ((cols[21] || '').trim() && (cols[21] || '').trim() !== '0' && (cols[21] || '').trim().startsWith('http')) ? (cols[21] || '').trim() : null,
             sentiment: avgScore >= 85 ? 'positive' : avgScore >= 60 ? 'neutral' : 'negative',
             tags: avgScore >= 90 ? ['Top Article'] : avgScore >= 85 ? ['Trending'] : [],
             aiScored: true,
@@ -5534,6 +5534,7 @@
       // Set link URLs from backend result
       // Gamma URL
       let gammaUrl = result.gamma_url || status.gamma_url || '';
+      if (gammaUrl === '0' || !gammaUrl.startsWith('http')) gammaUrl = '';
       document.getElementById('gamma-link').href = gammaUrl || 'https://gamma.app';
 
       // Embed Gamma presentation if we have a URL
@@ -5562,11 +5563,11 @@
       let pdfUrl = result.pdf_url || selectedArticle.link || '#';
       document.getElementById('download-link').href = pdfUrl;
 
-      // LinkedIn link - use actual posted URL
+      // LinkedIn link - use actual posted URL or article URL
       let linkedinUrl = result.linkedin_url || status.linkedin_post_url || '';
       if (!linkedinUrl) {
         const articleUrl = selectedArticle.url || selectedArticle.link || '';
-        linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(articleUrl)}`;
+        linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(articleUrl || window.location.href)}`;
       }
       document.getElementById('linkedin-link').href = linkedinUrl;
 
@@ -5624,13 +5625,27 @@
         }
       }
 
-      // Fallback: open LinkedIn share dialog directly
+      // Fallback: open LinkedIn share dialog with pre-populated text
       showLoading(false);
       const gammaLink = document.getElementById('gamma-link');
-      const shareTarget = (gammaLink && gammaLink.href && gammaLink.href !== '#')
-        ? gammaLink.href
-        : (selectedArticle?.url || selectedArticle?.link || window.location.href);
-      const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareTarget)}`;
+      const hasRealGamma = gammaLink && gammaLink.href && gammaLink.href.includes('gamma.app/docs/');
+      const articleUrl = selectedArticle?.url || selectedArticle?.link || '';
+      const shareTarget = hasRealGamma ? gammaLink.href : articleUrl;
+
+      // Build pre-populated post text
+      const title = selectedArticle?.title || '';
+      const source = selectedArticle?.source || '';
+      const score = selectedArticle?.avgScore || '';
+      const sentiment = selectedArticle?.sentiment || '';
+      const tags = selectedArticle?.tags || [];
+      let postText = `${title}\n\n`;
+      if (score) postText += `AI Consensus Score: ${score}% ${sentiment ? '(' + sentiment + ')' : ''}\n`;
+      if (source) postText += `Source: ${source}\n`;
+      if (shareTarget) postText += `\n${shareTarget}\n`;
+      postText += `\n#AI #ArtificialIntelligence #Tech`;
+      if (tags.includes('Trending')) postText += ` #Trending`;
+
+      const shareUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(postText)}`;
       window.open(shareUrl, '_blank');
     }
 
