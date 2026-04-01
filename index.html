@@ -3160,19 +3160,40 @@
     // GOOGLE SHEETS INTEGRATION
     // ============================================
     function parseCSV(csvText) {
-      const lines = csvText.split('\n');
-      const headers = parseCSVLine(lines[0]);
-      const rows = [];
+      // Split CSV into logical rows, respecting quoted fields that contain newlines
+      const logicalLines = [];
+      let current = '';
+      let inQuotes = false;
 
-      for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim()) {
-          const values = parseCSVLine(lines[i]);
-          const row = {};
-          headers.forEach((header, idx) => {
-            row[header.trim()] = values[idx] || '';
-          });
-          rows.push(row);
+      for (let i = 0; i < csvText.length; i++) {
+        const char = csvText[i];
+        if (char === '"') {
+          current += char;
+          if (inQuotes && i + 1 < csvText.length && csvText[i + 1] === '"') {
+            current += csvText[i + 1];
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && i + 1 < csvText.length && csvText[i + 1] === '\n') i++;
+          if (current.trim()) logicalLines.push(current);
+          current = '';
+        } else {
+          current += char;
         }
+      }
+      if (current.trim()) logicalLines.push(current);
+
+      const headers = parseCSVLine(logicalLines[0]);
+      const rows = [];
+      for (let i = 1; i < logicalLines.length; i++) {
+        const values = parseCSVLine(logicalLines[i]);
+        const row = {};
+        headers.forEach((header, idx) => {
+          row[header.trim()] = values[idx] || '';
+        });
+        rows.push(row);
       }
       return rows;
     }
@@ -3185,7 +3206,13 @@
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
         if (char === '"') {
-          inQuotes = !inQuotes;
+          if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+            // Escaped quote ("") inside a quoted field → literal "
+            current += '"';
+            i++; // skip next quote
+          } else {
+            inQuotes = !inQuotes;
+          }
         } else if (char === ',' && !inQuotes) {
           result.push(current.trim());
           current = '';
@@ -3346,12 +3373,39 @@
     }
 
     function parseCSVRows(csvText) {
-      const lines = csvText.split('\n');
+      // Split CSV into logical rows, respecting quoted fields that contain newlines
       const rows = [];
-      for (let i = 1; i < lines.length; i++) { // skip header
-        if (lines[i].trim()) {
-          rows.push(parseCSVLine(lines[i]));
+      let current = '';
+      let inQuotes = false;
+      let isHeader = true;
+
+      for (let i = 0; i < csvText.length; i++) {
+        const char = csvText[i];
+        if (char === '"') {
+          current += char;
+          if (inQuotes && i + 1 < csvText.length && csvText[i + 1] === '"') {
+            current += csvText[i + 1];
+            i++; // skip escaped quote, stay in quotes
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && i + 1 < csvText.length && csvText[i + 1] === '\n') {
+            i++; // skip \n after \r (Windows line endings)
+          }
+          if (isHeader) {
+            isHeader = false;
+          } else if (current.trim()) {
+            rows.push(parseCSVLine(current));
+          }
+          current = '';
+        } else {
+          current += char;
         }
+      }
+      // Handle last row (no trailing newline)
+      if (!isHeader && current.trim()) {
+        rows.push(parseCSVLine(current));
       }
       return rows;
     }
