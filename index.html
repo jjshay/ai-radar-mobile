@@ -3265,10 +3265,15 @@
         }
       } catch (e) { /* cache miss */ }
 
-      // Fetch fresh from Google Sheets CSV
+      // Fetch fresh from Google Sheets CSV (with timeout)
       try {
-        const resp = await fetch(SHEETS_CSV_URL);
+        const sheetCtrl = new AbortController();
+        const sheetTimeout = setTimeout(() => sheetCtrl.abort(), 8000);
+        const resp = await fetch(SHEETS_CSV_URL, { signal: sheetCtrl.signal });
+        clearTimeout(sheetTimeout);
+        if (!resp.ok) throw new Error(`Sheets HTTP ${resp.status}`);
         const csvText = await resp.text();
+        if (!csvText || csvText.length < 50) throw new Error('Empty or invalid CSV response');
         const rows = parseCSVRows(csvText);
 
         const allArticles = rows.map((cols, idx) => {
@@ -3358,13 +3363,18 @@
 
     function filterByTopic(articles, topic) {
       if (!topic || topic === 'artificial intelligence') return articles;
-      const keywords = topic.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const keywords = topic.toLowerCase().split(/\s+/).filter(w => w.length > 1);
       if (keywords.length === 0) return articles;
 
       const matched = articles.filter(a => {
-        const text = ((a.title || '') + ' ' + (a.source || '') + ' ' + (a.summary || '')).toLowerCase();
+        const text = ((a.title || '') + ' ' + (a.source || '') + ' ' + (a.summary || '') + ' ' + Object.values(a.rationales || {}).join(' ')).toLowerCase();
         return keywords.some(kw => text.includes(kw));
       });
+      // If filtering is too aggressive, return all articles rather than nothing
+      if (matched.length < 3 && articles.length > 0) {
+        console.log(`Topic filter too strict (${matched.length} matches for "${topic}"), returning all ${articles.length} articles`);
+        return articles;
+      }
       return matched;
     }
 
@@ -3378,7 +3388,10 @@
         let directArticles = [];
 
         if (source === 'newsapi') {
-          const resp = await fetch(`/api/newsapi?q=${encodeURIComponent(selectedTopic)}&pageSize=12`);
+          const newsCtrl = new AbortController();
+          const newsTimeout = setTimeout(() => newsCtrl.abort(), 8000);
+          const resp = await fetch(`/api/newsapi?q=${encodeURIComponent(selectedTopic)}&pageSize=12`, { signal: newsCtrl.signal });
+          clearTimeout(newsTimeout);
           const data = await resp.json();
           if (data.articles) {
             directArticles = data.articles.map(a => {
@@ -3640,6 +3653,56 @@
       showScreen('swipe');
     }
 
+    async function fetchFromGrokLive(topic) {
+      try {
+        updateScoringStatus('Fetching live news via Grok...');
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 15000);
+        const resp = await fetch('/api/grok', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'grok-3-mini',
+            messages: [{
+              role: 'user',
+              content: `Find 12 real, current news articles from the last 48 hours about: ${topic}. For EACH article provide the actual headline, a 2-3 sentence summary, the real source URL, the publisher name, and approximate publish date. Return ONLY a JSON array, no other text: [{"title":"...","summary":"...","url":"...","source":"...","publishedAt":"..."}]`
+            }]
+          }),
+          signal: ctrl.signal
+        });
+        clearTimeout(timeout);
+        const data = await resp.json();
+        if (data.choices?.[0]?.message?.content) {
+          let content = data.choices[0].message.content;
+          content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+          const parsed = JSON.parse(content);
+          return parsed.map(a => {
+            const text = (a.title || '') + ' ' + (a.summary || '');
+            return {
+              id: Date.now() + Math.random(),
+              title: a.title,
+              summary: a.summary || '',
+              url: a.url || '#',
+              image: null,
+              source: a.source || 'grok-live',
+              publishedAt: a.publishedAt,
+              date: formatDate(a.publishedAt || new Date().toISOString()),
+              words: text.split(/\s+/).filter(w => w).length,
+              fetchSource: 'grok-live'
+            };
+          });
+        }
+      } catch (e) {
+        console.error('Grok live news fetch failed:', e);
+      }
+      return [];
+    }
+
+    function updateScoringStatus(msg) {
+      const el = document.getElementById('scoring-status');
+      if (el) el.textContent = msg;
+    }
+
     async function fetchAllSources() {
       scoringAborted = false;
       articles = [];
@@ -3659,28 +3722,36 @@
       }
       document.getElementById('offline-banner').classList.remove('show');
 
-      const useSheets = true;
-      const useNewsAPI = true;
-
-      // Step 1: Load pre-scored articles from Google Sheets (instant)
-      if (useSheets) {
+      // Step 1: Load pre-scored articles from Google Sheets
+      updateScoringStatus('Loading articles from database...');
+      try {
         const sheetArticles = await fetchFromSheets(selectedTopic);
         articles = [...articles, ...sheetArticles];
         console.log('Sheets loaded:', sheetArticles.length, 'for topic:', selectedTopic);
+      } catch (e) {
+        console.error('Sheets fetch failed:', e);
       }
 
-      // Step 2: Fetch from NewsAPI - always for Surprise Me, or if selected, or if sheets had no matches
-      const isSurpriseMe = selectedTopic === 'top news world today';
-      const needsLiveNews = useNewsAPI || isSurpriseMe || (useSheets && articles.length === 0);
-      if (needsLiveNews) {
-        try {
-          await fetchSource('newsapi');
-        } catch (e) {
-          console.error('NewsAPI fetch failed:', e);
-        }
+      // Step 2: Fetch from NewsAPI for live news
+      updateScoringStatus('Fetching live news...');
+      try {
+        await fetchSource('newsapi');
+      } catch (e) {
+        console.error('NewsAPI fetch failed:', e);
       }
 
+      // Step 3: If we still have no articles, use Grok as live news fallback
       if (articles.length === 0) {
+        console.log('No articles from Sheets or NewsAPI, trying Grok live...');
+        const grokArticles = await fetchFromGrokLive(selectedTopic);
+        articles = [...articles, ...grokArticles];
+        console.log('Grok live loaded:', grokArticles.length);
+      }
+
+      // Step 4: If still nothing, show error and go home
+      if (articles.length === 0) {
+        updateScoringStatus('No articles found. Please try again.');
+        await sleep(1500);
         goHome();
         return;
       }
