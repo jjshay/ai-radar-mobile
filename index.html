@@ -3649,11 +3649,50 @@
       showScreen('swipe');
     }
 
-    async function fetchFromGrokLive(topic) {
+    // Topic-specific descriptions for better AI prompts
+    const topicPrompts = {
+      'artificial intelligence': 'artificial intelligence, AI, machine learning, LLMs, ChatGPT, Claude, Gemini, OpenAI, Anthropic, Google AI, tech companies, semiconductors, Nvidia',
+      'robotics automation': 'robotics, automation, humanoid robots, industrial robots, autonomous vehicles, drones, Boston Dynamics, Tesla Optimus, warehouse automation, manufacturing robots',
+      'merger acquisition private equity venture capital': 'mergers and acquisitions, M&A deals, private equity, venture capital funding, startup fundraising, IPOs, corporate buyouts, investment rounds, VC deals',
+      'culture entertainment society trends': 'culture, entertainment, social media trends, movies, music, viral moments, celebrity news, pop culture, society, lifestyle trends',
+      'top news world today': 'top breaking news, world events, politics, economics, global affairs, major headlines'
+    };
+
+    function parseAIArticles(content, sourceName) {
       try {
-        updateScoringStatus('Fetching live news via Grok...');
+        // Strip markdown code fences if present
+        content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        // Try to find JSON array in the response
+        const arrayMatch = content.match(/\[[\s\S]*\]/);
+        if (arrayMatch) content = arrayMatch[0];
+        const parsed = JSON.parse(content);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(a => a && a.title).map(a => {
+          const text = (a.title || '') + ' ' + (a.summary || '');
+          return {
+            id: Date.now() + Math.random(),
+            title: a.title,
+            summary: a.summary || '',
+            url: a.url || '#',
+            image: null,
+            source: a.source || sourceName,
+            publishedAt: a.publishedAt,
+            date: formatDate(a.publishedAt || new Date().toISOString()),
+            words: text.split(/\s+/).filter(w => w).length,
+            fetchSource: sourceName
+          };
+        });
+      } catch (e) {
+        console.error(`${sourceName} parse error:`, e);
+        return [];
+      }
+    }
+
+    async function fetchFromGrokLive(topic, count = 15) {
+      try {
+        const topicDesc = topicPrompts[topic] || topic;
         const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 15000);
+        const timeout = setTimeout(() => ctrl.abort(), 20000);
         const resp = await fetch('/api/grok', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3661,7 +3700,7 @@
             model: 'grok-3-mini',
             messages: [{
               role: 'user',
-              content: `Find 12 real, current news articles from the last 48 hours about: ${topic}. For EACH article provide the actual headline, a 2-3 sentence summary, the real source URL, the publisher name, and approximate publish date. Return ONLY a JSON array, no other text: [{"title":"...","summary":"...","url":"...","source":"...","publishedAt":"..."}]`
+              content: `Find ${count} real, current news articles from the last 7 days about: ${topicDesc}. Each must be a DIFFERENT story (no duplicates). For EACH article provide the actual headline, a 2-3 sentence summary, the real source URL, the publisher name, and publish date. Return ONLY a valid JSON array, no other text: [{"title":"...","summary":"...","url":"...","source":"...","publishedAt":"YYYY-MM-DD"}]`
             }]
           }),
           signal: ctrl.signal
@@ -3669,27 +3708,38 @@
         clearTimeout(timeout);
         const data = await resp.json();
         if (data.choices?.[0]?.message?.content) {
-          let content = data.choices[0].message.content;
-          content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-          const parsed = JSON.parse(content);
-          return parsed.map(a => {
-            const text = (a.title || '') + ' ' + (a.summary || '');
-            return {
-              id: Date.now() + Math.random(),
-              title: a.title,
-              summary: a.summary || '',
-              url: a.url || '#',
-              image: null,
-              source: a.source || 'grok-live',
-              publishedAt: a.publishedAt,
-              date: formatDate(a.publishedAt || new Date().toISOString()),
-              words: text.split(/\s+/).filter(w => w).length,
-              fetchSource: 'grok-live'
-            };
-          });
+          return parseAIArticles(data.choices[0].message.content, 'grok');
         }
       } catch (e) {
-        console.error('Grok live news fetch failed:', e);
+        console.error('Grok live fetch failed:', e);
+      }
+      return [];
+    }
+
+    async function fetchFromPerplexityLive(topic, count = 15) {
+      try {
+        const topicDesc = topicPrompts[topic] || topic;
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 20000);
+        const resp = await fetch('/api/perplexity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'sonar',
+            messages: [{
+              role: 'user',
+              content: `Find ${count} real, current news articles from the last 7 days about: ${topicDesc}. Each must be a DIFFERENT story (no duplicates). For EACH article provide the actual headline, a 2-3 sentence summary, the real source URL, the publisher name, and publish date. Return ONLY a valid JSON array, no other text: [{"title":"...","summary":"...","url":"...","source":"...","publishedAt":"YYYY-MM-DD"}]`
+            }]
+          }),
+          signal: ctrl.signal
+        });
+        clearTimeout(timeout);
+        const data = await resp.json();
+        if (data.choices?.[0]?.message?.content) {
+          return parseAIArticles(data.choices[0].message.content, 'perplexity');
+        }
+      } catch (e) {
+        console.error('Perplexity live fetch failed:', e);
       }
       return [];
     }
@@ -3697,6 +3747,30 @@
     function updateScoringStatus(msg) {
       const el = document.getElementById('scoring-status');
       if (el) el.textContent = msg;
+    }
+
+    // Per-topic live cache (30 min TTL)
+    const LIVE_CACHE_TTL = 30 * 60 * 1000;
+    function getLiveCacheKey(topic) { return 'ai-pulse-live-' + topic.replace(/\s+/g, '-'); }
+
+    function getCachedLiveArticles(topic) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(getLiveCacheKey(topic)) || 'null');
+        if (cached && (Date.now() - cached.timestamp < LIVE_CACHE_TTL)) {
+          console.log(`Using cached live articles for "${topic}":`, cached.articles.length);
+          return cached.articles;
+        }
+      } catch (e) { /* cache miss */ }
+      return null;
+    }
+
+    function cacheLiveArticles(topic, articles) {
+      try {
+        localStorage.setItem(getLiveCacheKey(topic), JSON.stringify({
+          timestamp: Date.now(),
+          articles: articles.slice(0, 40)
+        }));
+      } catch (e) { console.log('Live cache write error:', e); }
     }
 
     async function fetchAllSources() {
@@ -3718,33 +3792,39 @@
       }
       document.getElementById('offline-banner').classList.remove('show');
 
-      // Step 1: Load pre-scored articles from Google Sheets
-      updateScoringStatus('Loading articles from database...');
-      try {
-        const sheetArticles = await fetchFromSheets(selectedTopic);
-        articles = [...articles, ...sheetArticles];
-        console.log('Sheets loaded:', sheetArticles.length, 'for topic:', selectedTopic);
-      } catch (e) {
-        console.error('Sheets fetch failed:', e);
+      // Check per-topic live cache first
+      const cachedLive = getCachedLiveArticles(selectedTopic);
+      if (cachedLive && cachedLive.length >= 15) {
+        articles = cachedLive;
+        console.log(`Loaded ${articles.length} cached live articles for "${selectedTopic}"`);
+        await sleep(300);
+        finishAndShowSwipe();
+        return;
       }
 
-      // Step 2: Fetch from NewsAPI for live news
-      updateScoringStatus('Fetching live news...');
-      try {
-        await fetchSource('newsapi');
-      } catch (e) {
-        console.error('NewsAPI fetch failed:', e);
+      // Fetch live news from Grok + Perplexity + NewsAPI in PARALLEL (topic-specific)
+      updateScoringStatus('Fetching fresh news for this topic...');
+      const [grokArticles, pplxArticles, newsapiResult, sheetArticles] = await Promise.all([
+        fetchFromGrokLive(selectedTopic, 15),
+        fetchFromPerplexityLive(selectedTopic, 15),
+        fetchSource('newsapi').then(() => []).catch(() => []),
+        fetchFromSheets(selectedTopic).catch(() => [])
+      ]);
+
+      // newsapi articles are already added to `articles` array inside fetchSource
+      const newsapiCount = articles.length;
+      // Now add the AI-fetched articles
+      articles = [...articles, ...grokArticles, ...pplxArticles, ...sheetArticles];
+
+      console.log(`Fetched: Grok=${grokArticles.length}, Perplexity=${pplxArticles.length}, NewsAPI=${newsapiCount}, Sheets=${sheetArticles.length} for "${selectedTopic}"`);
+      updateScoringStatus(`Found ${articles.length} articles, preparing...`);
+
+      // Cache the live results per-topic
+      if (articles.length > 0) {
+        cacheLiveArticles(selectedTopic, articles);
       }
 
-      // Step 3: If we still have no articles, use Grok as live news fallback
-      if (articles.length === 0) {
-        console.log('No articles from Sheets or NewsAPI, trying Grok live...');
-        const grokArticles = await fetchFromGrokLive(selectedTopic);
-        articles = [...articles, ...grokArticles];
-        console.log('Grok live loaded:', grokArticles.length);
-      }
-
-      // Step 4: If still nothing, show error and go home
+      // If still nothing, show error and go home
       if (articles.length === 0) {
         updateScoringStatus('No articles found. Please try again.');
         await sleep(1500);
@@ -3752,34 +3832,21 @@
         return;
       }
 
-      console.log(`${articles.length} articles ready`);
+      console.log(`${articles.length} articles ready for "${selectedTopic}"`);
 
-      // Skip scoring screen for pre-scored articles - go straight to swipe
-      const allScored = articles.every(a => a.aiScored || a.scores);
-      if (allScored) {
-        await sleep(300);
-        finishAndShowSwipe();
-      } else {
-        // Scoring screen is already showing (from selectTopicAndGo)
-        try {
-          await Promise.race([
-            runAIScoring(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Scoring timeout')), 12000))
-          ]);
-        } catch (err) {
-          console.error('Scoring error/timeout:', err);
-          articles.forEach(a => {
-            if (!a.scores) {
-              const result = localScoreArticle(a);
-              a.scores = result.scores;
-              a.avgScore = result.avgScore;
-              a.sentiment = result.sentiment;
-              a.tags = result.tags;
-            }
-          });
+      // Apply local scores to any unscored articles so we can show cards fast
+      articles.forEach(a => {
+        if (!a.scores && !a.aiScored) {
+          const result = localScoreArticle(a);
+          a.scores = result.scores;
+          a.avgScore = result.avgScore;
+          a.sentiment = result.sentiment;
+          a.tags = result.tags;
         }
-        if (!scoringAborted) finishAndShowSwipe();
-      }
+      });
+
+      await sleep(300);
+      finishAndShowSwipe();
     }
 
     function clampScore(val) {
