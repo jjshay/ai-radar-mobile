@@ -2380,40 +2380,36 @@
 
     </div>
 
-    <!-- SCREEN 2: AI SCORING ANIMATION -->
+    <!-- SCREEN 2: LOADING / SCORING -->
     <div id="screen-scoring" class="screen" style="justify-content: center; align-items: center; padding: 40px 20px;">
-      <div style="text-align: center; margin-bottom: 40px;">
-        <h2 style="font-size: 24px; margin-bottom: 10px; color: var(--gold);">Analyzing Articles</h2>
-        <p style="color: var(--text-muted); font-size: 14px;">5 AI models scoring your articles...</p>
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h2 style="font-size: 24px; margin-bottom: 10px; color: var(--gold);">Finding Articles</h2>
+        <p id="scoring-topic-label" style="color: var(--text-muted); font-size: 14px;">Loading fresh news...</p>
       </div>
 
-      <!-- AI Logos with animated dots -->
-      <div id="ai-scoring-dots" style="display: flex; gap: 20px; margin-bottom: 40px;">
-        <div class="ai-score-logo" id="score-gpt" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.5s;">
-          <img src="logos/chatgpt.png" alt="ChatGPT" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
-          <span style="font-size: 10px; margin-top: 5px; color: var(--text-muted);">GPT</span>
+      <!-- Source status indicators -->
+      <div id="source-status" style="width: 100%; max-width: 320px; margin-bottom: 30px;">
+        <div id="status-grok" class="source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <span style="color: #fff; font-size: 14px;">Grok</span>
+          <span class="source-badge" style="font-size: 12px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.1); color: var(--text-muted);">waiting...</span>
         </div>
-        <div class="ai-score-logo" id="score-claude" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.5s;">
-          <img src="logos/claude.png" alt="Claude" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
-          <span style="font-size: 10px; margin-top: 5px; color: var(--text-muted);">Claude</span>
+        <div id="status-perplexity" class="source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <span style="color: #fff; font-size: 14px;">Perplexity</span>
+          <span class="source-badge" style="font-size: 12px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.1); color: var(--text-muted);">waiting...</span>
         </div>
-        <div class="ai-score-logo" id="score-gemini" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.5s;">
-          <img src="logos/gemini.png" alt="Gemini" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
-          <span style="font-size: 10px; margin-top: 5px; color: var(--text-muted);">Gemini</span>
+        <div id="status-newsapi" class="source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <span style="color: #fff; font-size: 14px;">NewsAPI</span>
+          <span class="source-badge" style="font-size: 12px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.1); color: var(--text-muted);">waiting...</span>
         </div>
-        <div class="ai-score-logo" id="score-grok" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.5s;">
-          <img src="logos/grok.png" alt="Grok" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #333;">
-          <span style="font-size: 10px; margin-top: 5px; color: var(--text-muted);">Grok</span>
-        </div>
-        <div class="ai-score-logo" id="score-pplx" style="display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: all 0.5s;">
-          <img src="logos/perplexity.png" alt="Perplexity" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #fff;">
-          <span style="font-size: 10px; margin-top: 5px; color: var(--text-muted);">Pplx</span>
+        <div id="status-sheets" class="source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+          <span style="color: #fff; font-size: 14px;">Database</span>
+          <span class="source-badge" style="font-size: 12px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.1); color: var(--text-muted);">waiting...</span>
         </div>
       </div>
 
       <div id="scoring-status" style="color: var(--text-muted); font-size: 14px;">Initializing...</div>
-      <div id="scoring-count" style="color: var(--gold); font-size: 18px; margin-top: 10px; font-weight: bold;">0 articles scored</div>
-      <button onclick="skipScoring()" style="margin-top: 30px; background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 10px 30px; border-radius: 12px; font-size: 14px; cursor: pointer;">Skip Scoring →</button>
+      <div id="scoring-count" style="color: var(--gold); font-size: 18px; margin-top: 10px; font-weight: bold;">0 articles found</div>
+      <button onclick="skipScoring()" style="margin-top: 30px; background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 10px 30px; border-radius: 12px; font-size: 14px; cursor: pointer;">Skip →</button>
     </div>
 
     <!-- SCREEN 3: SWIPE CARDS -->
@@ -3688,11 +3684,37 @@
       }
     }
 
+    function setSourceStatus(sourceId, status, count) {
+      const row = document.getElementById('status-' + sourceId);
+      if (!row) return;
+      const badge = row.querySelector('.source-badge');
+      if (!badge) return;
+      if (status === 'loading') {
+        badge.textContent = 'fetching...';
+        badge.style.background = 'rgba(212,175,55,0.2)';
+        badge.style.color = 'var(--gold)';
+      } else if (status === 'success') {
+        badge.textContent = count + ' articles';
+        badge.style.background = 'rgba(34,197,94,0.2)';
+        badge.style.color = '#22c55e';
+      } else if (status === 'error') {
+        badge.textContent = count || 'failed';
+        badge.style.background = 'rgba(239,68,68,0.2)';
+        badge.style.color = '#ef4444';
+      }
+    }
+
+    function updateArticleCount() {
+      const el = document.getElementById('scoring-count');
+      if (el) el.textContent = articles.length + ' articles found';
+    }
+
     async function fetchFromGrokLive(topic, count = 15) {
+      setSourceStatus('grok', 'loading');
       try {
         const topicDesc = topicPrompts[topic] || topic;
         const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 20000);
+        const timeout = setTimeout(() => ctrl.abort(), 25000);
         const resp = await fetch('/api/grok', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3706,21 +3728,37 @@
           signal: ctrl.signal
         });
         clearTimeout(timeout);
-        const data = await resp.json();
-        if (data.choices?.[0]?.message?.content) {
-          return parseAIArticles(data.choices[0].message.content, 'grok');
+        if (!resp.ok) {
+          const errText = await resp.text().catch(() => resp.status);
+          console.error('Grok API error:', resp.status, errText);
+          setSourceStatus('grok', 'error', 'HTTP ' + resp.status);
+          return [];
         }
+        const data = await resp.json();
+        if (data.error) {
+          console.error('Grok API error:', data.error);
+          setSourceStatus('grok', 'error', 'API error');
+          return [];
+        }
+        if (data.choices?.[0]?.message?.content) {
+          const results = parseAIArticles(data.choices[0].message.content, 'grok');
+          setSourceStatus('grok', results.length > 0 ? 'success' : 'error', results.length || 'no results');
+          return results;
+        }
+        setSourceStatus('grok', 'error', 'empty response');
       } catch (e) {
         console.error('Grok live fetch failed:', e);
+        setSourceStatus('grok', 'error', e.name === 'AbortError' ? 'timeout' : 'network error');
       }
       return [];
     }
 
     async function fetchFromPerplexityLive(topic, count = 15) {
+      setSourceStatus('perplexity', 'loading');
       try {
         const topicDesc = topicPrompts[topic] || topic;
         const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 20000);
+        const timeout = setTimeout(() => ctrl.abort(), 25000);
         const resp = await fetch('/api/perplexity', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3734,12 +3772,27 @@
           signal: ctrl.signal
         });
         clearTimeout(timeout);
-        const data = await resp.json();
-        if (data.choices?.[0]?.message?.content) {
-          return parseAIArticles(data.choices[0].message.content, 'perplexity');
+        if (!resp.ok) {
+          const errText = await resp.text().catch(() => resp.status);
+          console.error('Perplexity API error:', resp.status, errText);
+          setSourceStatus('perplexity', 'error', 'HTTP ' + resp.status);
+          return [];
         }
+        const data = await resp.json();
+        if (data.error) {
+          console.error('Perplexity API error:', data.error);
+          setSourceStatus('perplexity', 'error', 'API error');
+          return [];
+        }
+        if (data.choices?.[0]?.message?.content) {
+          const results = parseAIArticles(data.choices[0].message.content, 'perplexity');
+          setSourceStatus('perplexity', results.length > 0 ? 'success' : 'error', results.length || 'no results');
+          return results;
+        }
+        setSourceStatus('perplexity', 'error', 'no key set');
       } catch (e) {
         console.error('Perplexity live fetch failed:', e);
+        setSourceStatus('perplexity', 'error', e.name === 'AbortError' ? 'timeout' : 'network error');
       }
       return [];
     }
@@ -3802,32 +3855,63 @@
         return;
       }
 
-      // Fetch live news from Grok + Perplexity + NewsAPI in PARALLEL (topic-specific)
-      updateScoringStatus('Fetching fresh news for this topic...');
-      const [grokArticles, pplxArticles, newsapiResult, sheetArticles] = await Promise.all([
+      // Show topic on scoring screen
+      const topicLabel = document.getElementById('scoring-topic-label');
+      const topicNames = {
+        'artificial intelligence': 'AI & Technology',
+        'robotics automation': 'Robotics',
+        'merger acquisition private equity venture capital': 'M&A / PE / VC',
+        'culture entertainment society trends': 'Culture',
+        'top news world today': 'Surprise Me'
+      };
+      if (topicLabel) topicLabel.textContent = 'Loading: ' + (topicNames[selectedTopic] || selectedTopic);
+
+      // Reset source status indicators
+      ['grok', 'perplexity', 'newsapi', 'sheets'].forEach(s => setSourceStatus(s, 'loading'));
+
+      // Fetch live news from Grok + Perplexity + NewsAPI + Sheets in PARALLEL
+      updateScoringStatus('Fetching fresh news from multiple sources...');
+
+      const newsapiPromise = fetchSource('newsapi').then(count => {
+        setSourceStatus('newsapi', count > 0 ? 'success' : 'error', count || 'no results');
+        return count;
+      }).catch(e => {
+        setSourceStatus('newsapi', 'error', 'failed');
+        return 0;
+      });
+
+      const sheetsPromise = fetchFromSheets(selectedTopic).then(arr => {
+        setSourceStatus('sheets', arr.length > 0 ? 'success' : 'error', arr.length || 'empty');
+        return arr;
+      }).catch(e => {
+        setSourceStatus('sheets', 'error', 'failed');
+        return [];
+      });
+
+      const [grokArticles, pplxArticles, newsapiCount, sheetArticles] = await Promise.all([
         fetchFromGrokLive(selectedTopic, 15),
         fetchFromPerplexityLive(selectedTopic, 15),
-        fetchSource('newsapi').then(() => []).catch(() => []),
-        fetchFromSheets(selectedTopic).catch(() => [])
+        newsapiPromise,
+        sheetsPromise
       ]);
 
       // newsapi articles are already added to `articles` array inside fetchSource
-      const newsapiCount = articles.length;
-      // Now add the AI-fetched articles
+      // Now add the AI-fetched articles + sheets
       articles = [...articles, ...grokArticles, ...pplxArticles, ...sheetArticles];
 
       console.log(`Fetched: Grok=${grokArticles.length}, Perplexity=${pplxArticles.length}, NewsAPI=${newsapiCount}, Sheets=${sheetArticles.length} for "${selectedTopic}"`);
-      updateScoringStatus(`Found ${articles.length} articles, preparing...`);
+      updateArticleCount();
+      updateScoringStatus(articles.length > 0 ? 'Preparing your feed...' : 'No sources returned articles');
 
       // Cache the live results per-topic
       if (articles.length > 0) {
         cacheLiveArticles(selectedTopic, articles);
       }
 
-      // If still nothing, show error and go home
+      // If still nothing, show error and stay on scoring screen so user can see what failed
       if (articles.length === 0) {
-        updateScoringStatus('No articles found. Please try again.');
-        await sleep(1500);
+        updateScoringStatus('All sources failed. Check API keys in Vercel env vars.');
+        await sleep(3000);
         goHome();
         return;
       }
