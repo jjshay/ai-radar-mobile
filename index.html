@@ -2900,14 +2900,14 @@
         const quote = inspiringQuotes[Math.floor(Math.random() * inspiringQuotes.length)];
         const outro = ' ... This AI Pulse summary was brought to you by JJ Shay. Check out jjshay.com for other projects and over 70 free AI reports to download.';
         const fullSummary = (article.summary || article.description || '') + outro;
-        const response = await fetch(`${API_BASE}/audio-summary`, {
+        // Compose the spoken script and send to the working Vercel TTS proxy (OpenAI).
+        const spokenScript = `${quote} ... ${article.title || ''}. ${fullSummary}`.slice(0, 4000);
+        const response = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: article.title,
-            source: article.source || '',
-            summary: fullSummary,
-            quote: quote
+            text: spokenScript,
+            voice: 'nova'
           })
         });
 
@@ -5161,37 +5161,55 @@
       document.getElementById('gen-progress-fill').style.width = '0%';
       document.getElementById('gen-percent').textContent = '0%';
 
-      // Try to call real backend first
+      // Generate real slides via Vercel serverless (synchronous — no Railway, no polling)
+      document.getElementById('generating-status').textContent = 'Generating slides...';
       try {
-        console.log('Calling backend to generate slides (preview mode)...');
-        const response = await fetch(`${API_BASE}/generate-from-newsout`, {
+        const response = await fetch('/api/generate-slides', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: selectedArticle.title,
             summary: selectedArticle.summary || selectedArticle.description || '',
-            source: selectedArticle.source || '',
+            source: selectedArticle.source || selectedArticle.sourceType || '',
             link: selectedArticle.link || selectedArticle.url || '',
             avg_score: selectedArticle.avgScore || selectedArticle.avg_score || 85,
-            preview_only: true  // Generate but don't post - let user review first
+            count: config.count
           })
         });
 
         if (response.ok) {
           const data = await response.json();
-          currentJobId = data.job_id;
-          console.log('Backend job started:', currentJobId);
-          document.getElementById('generating-status').textContent = 'Generating slides...';
-          startGenerationPolling(config.count);
-          return;
+          if (data.slides && data.slides.length) {
+            await animateGenerationProgress(config);
+            document.getElementById('gen-step-description').textContent = 'Ready for review!';
+            showResultsScreen({ status: 'ready_for_review', percent: 100, slides: data.slides }, true);
+            return;
+          }
+          console.warn('Slide generation returned no slides');
+        } else {
+          console.warn('Slide generation failed, HTTP', response.status);
         }
       } catch (err) {
-        console.log('Backend not available, using simulation:', err);
+        console.error('Slide generation error:', err);
       }
 
-      // Fallback to simulation if backend unavailable
+      // Fallback to simulation only if real generation failed
       console.log('Running simulation with', config.count, 'cards');
       runGenerationSimulation(config.count);
+    }
+
+    // Animate the progress ring/steps to 100% once real slides are ready.
+    async function animateGenerationProgress(config) {
+      const total = config.count;
+      for (let i = 1; i <= total; i++) {
+        const pct = Math.round((i / total) * 100);
+        const fill = document.getElementById('gen-progress-fill');
+        const pctEl = document.getElementById('gen-percent');
+        if (fill) fill.style.width = pct + '%';
+        if (pctEl) pctEl.textContent = pct + '%';
+        updateStepCard(i, total, config);
+        await sleep(160);
+      }
     }
 
     function startGenerationPolling(cardCount) {

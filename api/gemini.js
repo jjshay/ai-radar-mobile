@@ -9,8 +9,14 @@ export default async function handler(req, res) {
 
   const API_KEY = process.env.GEMINI_API_KEY;
 
+  // Model is overridable so switching to Pro is a one-line/env change.
+  // NOTE: gemini-2.0-flash was retired by Google (404). gemini-2.5-flash works
+  // on the free tier. gemini-3.1-pro-preview requires billing enabled (free
+  // tier quota = 0), so set GEMINI_MODEL=gemini-3.1-pro-preview after enabling billing.
+  const MODEL = req.query.model || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
