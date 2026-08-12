@@ -4900,7 +4900,7 @@
         return;
       }
       const postText = buildLinkedInPostText(article, article.url);
-      window.open(`https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(postText)}`, '_blank');
+      shareOnLinkedIn(article.url, postText);
     }
 
     // ============================================
@@ -5812,11 +5812,13 @@
       // LinkedIn link - pre-populate a post with article info + Gamma link
       const articleUrl = selectedArticle.url || selectedArticle.link || '';
       const linkedinPostText = buildLinkedInPostText(selectedArticle, gammaUrl || articleUrl);
-      const linkedinShareUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(linkedinPostText)}`;
-      document.getElementById('linkedin-link').href = linkedinShareUrl;
+      const linkedinTarget = gammaUrl || articleUrl;
+      document.getElementById('linkedin-link').href = linkedinTarget
+        ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(linkedinTarget)}`
+        : 'https://www.linkedin.com/feed/?shareActive=true';
       document.getElementById('linkedin-link').onclick = function(e) {
         e.preventDefault();
-        window.open(linkedinShareUrl, '_blank');
+        shareOnLinkedIn(linkedinTarget, linkedinPostText);
       };
 
       console.log('Results:', { gammaUrl, pdfUrl, linkedinUrl, slides: slides.length });
@@ -5858,24 +5860,28 @@
       const shareTarget = hasRealGamma ? gammaLink.href : articleUrl;
 
       const postText = buildLinkedInPostText(selectedArticle, shareTarget);
-
-      // Copy caption to clipboard so it can be pasted into the LinkedIn composer.
-      try {
-        await navigator.clipboard.writeText(postText);
-        showToast('Caption copied — paste it into LinkedIn');
-      } catch (e) {
-        console.log('Clipboard copy failed:', e);
-      }
-
-      // Open LinkedIn's supported share dialog (share-offsite renders a link card;
-      // falls back to the feed composer if no shareable URL is available).
-      const shareUrl = shareTarget
-        ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareTarget)}`
-        : 'https://www.linkedin.com/feed/?shareActive=true';
-      window.open(shareUrl, '_blank');
+      await shareOnLinkedIn(shareTarget, postText);
 
       isPreviewMode = false;
       showSuccessModal(shareTarget || 'https://linkedin.com/feed');
+    }
+
+    // Reliable LinkedIn share used by every share entry point.
+    // LinkedIn dropped URL-prefilled post text in 2021, so we copy the caption
+    // to the clipboard and open the supported share-offsite dialog (link card).
+    async function shareOnLinkedIn(shareTarget, postText) {
+      try {
+        if (postText) {
+          await navigator.clipboard.writeText(postText);
+          showToast('Caption copied — paste it into LinkedIn');
+        }
+      } catch (e) {
+        console.log('Clipboard copy failed:', e);
+      }
+      const url = shareTarget
+        ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareTarget)}`
+        : 'https://www.linkedin.com/feed/?shareActive=true';
+      window.open(url, '_blank');
     }
 
     function showSuccessModal(linkedinUrl = 'https://linkedin.com/feed') {
