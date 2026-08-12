@@ -3374,6 +3374,11 @@
     // HOME SCREEN - FETCH SOURCES
     // ============================================
     async function fetchSource(source) {
+      // Legacy per-source status button; the live source badges are updated by
+      // the caller (fetchAllSources). Declared null so the guarded blocks below
+      // no-op instead of throwing ReferenceError (which was mislabeling working
+      // sources like NewsAPI as "failed").
+      const btn = null;
 
       // API calls through Vercel serverless routes (no CORS issues)
       try {
@@ -5821,7 +5826,7 @@
         shareOnLinkedIn(linkedinTarget, linkedinPostText);
       };
 
-      console.log('Results:', { gammaUrl, pdfUrl, linkedinUrl, slides: slides.length });
+      console.log('Results:', { gammaUrl, pdfUrl, linkedinTarget, slides: slides.length });
 
       // Update the view post button in success modal if we have a LinkedIn URL
       if (status.linkedin_post_url) {
