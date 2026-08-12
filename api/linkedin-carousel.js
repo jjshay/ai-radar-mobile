@@ -118,8 +118,8 @@ async function buildPdf(slides) {
     // Slide counter.
     page.drawText(`${i + 1} / ${slides.length}`, { x: SIZE - margin - 90, y: SIZE - 140, size: 24, font: bold, color: MUTED });
 
-    const title = (s.title || `Slide ${i + 1}`).toString();
-    const contentTxt = (s.content || s.body || s.text || '').toString();
+    const title = ascii(s.title || `Slide ${i + 1}`);
+    const contentTxt = ascii(s.content || s.body || s.text || '');
 
     // Title (gold, wrapped) starting below the accent bar.
     let y = SIZE - 260;
@@ -129,13 +129,17 @@ async function buildPdf(slides) {
       y -= titleSize + 12;
     }
 
-    // Body (white, wrapped) below the title.
+    // Body (white). Honor explicit newlines as hard breaks (blank line = gap),
+    // wrapping each segment. Used by the agree/disagree matrix + rationales.
     y -= 30;
     const bodySize = 36;
-    for (const line of wrap(contentTxt, regular, bodySize, maxWidth)) {
-      if (y < 150) break;
-      page.drawText(line, { x: margin, y, size: bodySize, font: regular, color: WHITE });
-      y -= bodySize + 14;
+    for (const segment of contentTxt.split('\n')) {
+      if (segment.trim() === '') { y -= bodySize * 0.6; continue; }
+      for (const line of wrap(segment, regular, bodySize, maxWidth)) {
+        if (y < 150) break;
+        page.drawText(line, { x: margin, y, size: bodySize, font: regular, color: WHITE });
+        y -= bodySize + 14;
+      }
     }
 
     // Footer brand.
@@ -143,6 +147,22 @@ async function buildPdf(slides) {
   });
 
   return await doc.save();
+}
+
+// pdf-lib StandardFonts use WinAnsi and throw on unencodable glyphs. Map the
+// common Unicode punctuation LLMs emit to ASCII, then drop anything > code 126.
+function ascii(text) {
+  return String(text)
+    .replace(/[‘’‚′]/g, "'")
+    .replace(/[“”„″]/g, '"')
+    .replace(/[–—―]/g, '-')
+    .replace(/[·•]/g, '-')
+    .replace(/…/g, '...')
+    .replace(/[→←↑↓]/g, '-')
+    .replace(/[✓✔]/g, '+')
+    .replace(/[✗✘]/g, 'x')
+    .replace(/ /g, ' ')
+    .replace(/[^\x09\x0A\x20-\x7E]/g, ''); // keep tab, newline, printable ASCII
 }
 
 // Greedy word-wrap: return lines that fit maxWidth for the given font/size.

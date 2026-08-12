@@ -5135,6 +5135,57 @@
       }, 300);
     }
 
+    // Build the multi-AI consensus carousel from each model's REAL score + rationale.
+    // Layout: Title -> Story+consensus -> Agree/Disagree matrix -> 1 slide per LLM -> Verdict.
+    // Returns null if fewer than 3 models scored (caller falls back to editorial slides).
+    function buildConsensusDeck(article) {
+      if (!article) return null;
+      const order = ['gpt', 'claude', 'gemini', 'grok', 'pplx'];
+      const labels = { gpt: 'ChatGPT · GPT-5', claude: 'Claude · Opus 4.8', gemini: 'Gemini · 3 Pro', grok: 'Grok · 4', pplx: 'Perplexity · Sonar Pro' };
+      const short = { gpt: 'GPT-5', claude: 'Claude', gemini: 'Gemini', grok: 'Grok', pplx: 'Perplexity' };
+      const scores = article.scores || {};
+      const rats = article.rationales || {};
+      const present = order.filter(k => typeof scores[k] === 'number');
+      if (present.length < 3) return null;
+
+      const vals = present.map(k => scores[k]);
+      const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+      const clean = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+      const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+      const stanceWord = (s) => s >= avg + 8 ? 'more bullish' : s <= avg - 8 ? 'dissents' : 'agrees';
+
+      const slides = [];
+      // 1 — Title / hook
+      slides.push({
+        title: clean(article.title) || 'AI Pulse',
+        content: `${present.length} leading AIs scored this story. Here's where they agree — and where they don't.`
+      });
+      // 2 — The Story + consensus score
+      const summary = clean(article.summary || article.description).slice(0, 240);
+      slides.push({
+        title: 'The Story',
+        content: `${summary || 'The full breakdown from five frontier models.'}\n\nAI Consensus Score: ${avg}%`
+      });
+      // 3 — Agree / Disagree matrix (all models at a glance)
+      const matrix = present.map(k => `${short[k]} — ${scores[k]}  (${stanceWord(scores[k])})`).join('\n');
+      slides.push({ title: 'Where They Agree & Disagree', content: matrix });
+      // 4-8 — one slide per LLM: stance + key insight (its rationale)
+      present.forEach(k => {
+        const insight = clean(rats[k]).slice(0, 220);
+        slides.push({
+          title: `${labels[k]} — ${scores[k]}%`,
+          content: `${cap(stanceWord(scores[k]))} with the consensus.\n\n${insight || 'No rationale returned.'}`
+        });
+      });
+      // 9 — Verdict + CTA
+      const agree = present.filter(k => Math.abs(scores[k] - avg) <= 8).length;
+      slides.push({
+        title: 'The Verdict',
+        content: `${agree} of ${present.length} models land near ~${avg}%.\n\nFollow for daily multi-AI takes on the news that moves markets.`
+      });
+      return slides;
+    }
+
     async function startCardGeneration(length) {
       const config = CARD_CONFIGS[length];
       console.log('Starting generation with config:', length, config);
@@ -5171,7 +5222,17 @@
       document.getElementById('gen-progress-fill').style.width = '0%';
       document.getElementById('gen-percent').textContent = '0%';
 
-      // Generate real slides via Vercel serverless (synchronous — no Railway, no polling)
+      // Preferred: build the multi-AI consensus deck from the real per-model
+      // scores + rationales gathered during deep scoring above.
+      const consensusSlides = buildConsensusDeck(selectedArticle);
+      if (consensusSlides && consensusSlides.length) {
+        await animateGenerationProgress(config);
+        document.getElementById('gen-step-description').textContent = 'Ready for review!';
+        showResultsScreen({ status: 'ready_for_review', percent: 100, slides: consensusSlides }, true);
+        return;
+      }
+
+      // Fallback: editorial slides via serverless (ChatGPT writes -> Claude edits).
       document.getElementById('generating-status').textContent = 'Generating slides...';
       try {
         const response = await fetch('/api/generate-slides', {
@@ -5722,7 +5783,7 @@
           <div class="slide-content">
             <div class="slide-number">${i + 1}</div>
             <div class="slide-title">${slide.title}</div>
-            ${slide.body ? `<div class="slide-body">${slide.body}</div>` : ''}
+            ${slide.body ? `<div class="slide-body">${String(slide.body).replace(/\n/g, '<br>')}</div>` : ''}
           </div>
         </div>
       `).join('');
