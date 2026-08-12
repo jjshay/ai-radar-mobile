@@ -4121,35 +4121,40 @@
     async function runDeepAIScoring(article) {
       const prompt = `You are scoring a news article for social media virality and content quality in the "${selectedTopic}" industry. Score 0-100 and give a 1-sentence rationale.\n\nTitle: "${article.title}"\nSummary: ${(article.summary || '').substring(0, 400)}\n\nReturn ONLY valid JSON: {"score":82,"rationale":"One sentence why"}`;
 
+      // Flagship latest models — smartest tier for best insight (verified live 2026-08-12).
       const models = [
         {
           key: 'gpt',
           endpoint: '/api/openai',
-          body: { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, temperature: 0.3 },
+          // gpt-5 is a reasoning model: uses max_completion_tokens (not max_tokens),
+          // rejects custom temperature, and needs a generous budget so reasoning
+          // tokens don't starve the JSON answer. reasoning_effort:'minimal' keeps scoring fast.
+          body: { model: 'gpt-5', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 2000, reasoning_effort: 'minimal' },
           parse: data => { const c = data.choices?.[0]?.message?.content; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         },
         {
           key: 'claude',
           endpoint: '/api/claude',
-          body: { model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: prompt }] },
-          parse: data => { const c = data.content?.[0]?.text; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
+          body: { model: 'claude-opus-4-8', max_tokens: 400, messages: [{ role: 'user', content: prompt }] },
+          parse: data => { const c = data.content?.find(b => b.type === 'text')?.text; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         },
         {
           key: 'gemini',
           endpoint: '/api/gemini',
+          // Model resolved server-side via GEMINI_MODEL env (gemini-3.1-pro-preview).
           body: { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, responseMimeType: 'application/json' } },
-          parse: data => { const c = data.candidates?.[0]?.content?.parts?.[0]?.text; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
+          parse: data => { const parts = data.candidates?.[0]?.content?.parts || []; const c = (parts.find(p => p.text) || {}).text; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         },
         {
           key: 'grok',
           endpoint: '/api/grok',
-          body: { model: 'grok-3-mini', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, temperature: 0.3 },
+          body: { model: 'grok-4', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, temperature: 0.3 },
           parse: data => { const c = data.choices?.[0]?.message?.content; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         },
         {
           key: 'pplx',
           endpoint: '/api/perplexity',
-          body: { model: 'sonar', messages: [{ role: 'user', content: prompt }], temperature: 0.3 },
+          body: { model: 'sonar-pro', messages: [{ role: 'user', content: prompt }], temperature: 0.3 },
           parse: data => { const c = data.choices?.[0]?.message?.content; return c ? JSON.parse(c.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')) : null; }
         }
       ];
@@ -5842,57 +5847,35 @@
     }
 
     async function finalPost() {
-      showLoading(true);
-
-      // If we have a job ID and it's in preview mode, use the /post endpoint
-      if (currentJobId && isPreviewMode) {
-        try {
-          console.log('Posting job:', currentJobId);
-          const response = await fetch(`${API_BASE}/post/${currentJobId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
-
-          if (response.ok) {
-            // Poll for posting completion
-            const pollPosting = setInterval(async () => {
-              try {
-                const statusRes = await fetch(`${API_BASE}/status/${currentJobId}`);
-                const status = await statusRes.json();
-                console.log('Posting status:', status.status, status.message);
-
-                if (status.status === 'completed') {
-                  clearInterval(pollPosting);
-                  showLoading(false);
-                  isPreviewMode = false;
-                  const linkedinUrl = status.result?.linkedin_url || status.result?.twitter_url || 'https://linkedin.com/feed';
-                  showSuccessModal(linkedinUrl);
-                } else if (status.status === 'failed') {
-                  clearInterval(pollPosting);
-                  showLoading(false);
-                  showToast('Posting failed: ' + status.message);
-                }
-              } catch (e) {
-                console.error('Poll error:', e);
-              }
-            }, 1000);
-            return;
-          }
-        } catch (err) {
-          console.log('Post endpoint failed:', err);
-        }
-      }
-
-      // Fallback: open LinkedIn share dialog with pre-populated text + Gamma link
-      showLoading(false);
+      // The old Railway /post job pipeline is retired (backend no longer deployed).
+      // Reliable path: copy the caption to the clipboard, then open LinkedIn's
+      // supported share-offsite dialog with the Gamma/article link. LinkedIn
+      // deprecated URL-prefilled post text in 2021, so we hand the user the text
+      // via clipboard and let them paste it into the composer that opens.
       const gammaLink = document.getElementById('gamma-link');
       const hasRealGamma = gammaLink && gammaLink.href && gammaLink.href.includes('gamma.app');
       const articleUrl = selectedArticle?.url || selectedArticle?.link || '';
       const shareTarget = hasRealGamma ? gammaLink.href : articleUrl;
 
       const postText = buildLinkedInPostText(selectedArticle, shareTarget);
-      const shareUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(postText)}`;
+
+      // Copy caption to clipboard so it can be pasted into the LinkedIn composer.
+      try {
+        await navigator.clipboard.writeText(postText);
+        showToast('Caption copied — paste it into LinkedIn');
+      } catch (e) {
+        console.log('Clipboard copy failed:', e);
+      }
+
+      // Open LinkedIn's supported share dialog (share-offsite renders a link card;
+      // falls back to the feed composer if no shareable URL is available).
+      const shareUrl = shareTarget
+        ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareTarget)}`
+        : 'https://www.linkedin.com/feed/?shareActive=true';
       window.open(shareUrl, '_blank');
+
+      isPreviewMode = false;
+      showSuccessModal(shareTarget || 'https://linkedin.com/feed');
     }
 
     function showSuccessModal(linkedinUrl = 'https://linkedin.com/feed') {
