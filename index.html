@@ -5710,6 +5710,9 @@
 
       totalSlides = slideData.length;
 
+      // Keep the generated slides so the LinkedIn carousel post can render them.
+      generatedSlides = slideData.map(s => ({ title: s.title || '', content: s.body || s.content || '' }));
+
       const flipbook = document.getElementById('flipbook');
       const dotsContainer = document.getElementById('flip-dots');
 
@@ -5859,12 +5862,37 @@
       const articleUrl = selectedArticle?.url || selectedArticle?.link || '';
       const shareTarget = hasRealGamma ? gammaLink.href : articleUrl;
 
-      // 1) True auto-post via the LinkedIn API (server-side member token).
-      //    Caption is built WITHOUT the inline URL — the link rides as a
-      //    preview card so it isn't duplicated in the text.
+      const apiText = buildLinkedInPostText(selectedArticle, '');
       showLoading(true);
+
+      // 1) Post the REAL slide-deck carousel (renders generatedSlides to a PDF).
+      if (Array.isArray(generatedSlides) && generatedSlides.length > 0) {
+        try {
+          const resp = await fetch('/api/linkedin-carousel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slides: generatedSlides,
+              title: selectedArticle?.title || 'AI Pulse',
+              commentary: apiText
+            })
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (resp.ok && data.ok) {
+            showLoading(false);
+            isPreviewMode = false;
+            showToast('Carousel posted to LinkedIn!');
+            showSuccessModal(data.url || 'https://www.linkedin.com/feed/');
+            return;
+          }
+          console.warn('Carousel post failed, trying text post:', resp.status, data.error, data.detail);
+        } catch (err) {
+          console.warn('Carousel post error, trying text post:', err);
+        }
+      }
+
+      // 2) Fallback: text + link-card auto-post via the member token.
       try {
-        const apiText = buildLinkedInPostText(selectedArticle, '');
         const resp = await fetch('/api/linkedin-post', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5884,7 +5912,7 @@
       }
       showLoading(false);
 
-      // 2) Fallback (e.g. token expired): copy caption + open the LinkedIn composer.
+      // 3) Final fallback (e.g. token expired): copy caption + open the LinkedIn composer.
       const postText = buildLinkedInPostText(selectedArticle, shareTarget);
       await shareOnLinkedIn(shareTarget, postText);
       isPreviewMode = false;
