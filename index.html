@@ -5854,19 +5854,39 @@
     }
 
     async function finalPost() {
-      // The old Railway /post job pipeline is retired (backend no longer deployed).
-      // Reliable path: copy the caption to the clipboard, then open LinkedIn's
-      // supported share-offsite dialog with the Gamma/article link. LinkedIn
-      // deprecated URL-prefilled post text in 2021, so we hand the user the text
-      // via clipboard and let them paste it into the composer that opens.
       const gammaLink = document.getElementById('gamma-link');
       const hasRealGamma = gammaLink && gammaLink.href && gammaLink.href.includes('gamma.app');
       const articleUrl = selectedArticle?.url || selectedArticle?.link || '';
       const shareTarget = hasRealGamma ? gammaLink.href : articleUrl;
 
+      // 1) True auto-post via the LinkedIn API (server-side member token).
+      //    Caption is built WITHOUT the inline URL — the link rides as a
+      //    preview card so it isn't duplicated in the text.
+      showLoading(true);
+      try {
+        const apiText = buildLinkedInPostText(selectedArticle, '');
+        const resp = await fetch('/api/linkedin-post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: apiText, link: shareTarget })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok && data.ok) {
+          showLoading(false);
+          isPreviewMode = false;
+          showToast('Posted to LinkedIn!');
+          showSuccessModal(data.url || 'https://www.linkedin.com/feed/');
+          return;
+        }
+        console.warn('Auto-post failed, falling back to composer:', resp.status, data.error, data.detail);
+      } catch (err) {
+        console.warn('Auto-post error, falling back to composer:', err);
+      }
+      showLoading(false);
+
+      // 2) Fallback (e.g. token expired): copy caption + open the LinkedIn composer.
       const postText = buildLinkedInPostText(selectedArticle, shareTarget);
       await shareOnLinkedIn(shareTarget, postText);
-
       isPreviewMode = false;
       showSuccessModal(shareTarget || 'https://linkedin.com/feed');
     }
