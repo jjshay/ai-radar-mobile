@@ -1,5 +1,10 @@
 # AI Pulse - Mobile-First Content Discovery Platform
 
+<!-- portfolio-navigation:start -->
+[Project brief](docs/PROJECT_BRIEF.md) · [Structured project record](project.json) · [Portfolio](https://github.com/jjshay)
+
+<!-- portfolio-navigation:end -->
+
 A swipe-based mobile app that helps users discover AI news, generate LinkedIn carousels, and interact with content through voice AI.
 
 **Live Demo:** [ai-radar-mobile.vercel.app](https://ai-radar-mobile.vercel.app)

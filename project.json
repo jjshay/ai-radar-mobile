@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "ai-radar-mobile",
+  "title": "AI Pulse Mobile",
+  "category": "Content operations",
+  "summary": "Mobile content discovery needs integrated listening, follow-up questions, and presentation creation.",
+  "status": "Source available; runtime not revalidated in this documentation review",
+  "visibility": "public",
+  "reviewed_on": "2026-09-11",
+  "reviewed_commit": "d0f1016e642f50099f2ac719e1f8e24a6f02c95e",
+  "architecture": "News cards \u2192 selection \u2192 API adapters for text, voice, and slides \u2192 publishing integration.",
+  "evidence": [
+    {
+      "path": "api/generate-slides.js",
+      "role": "Implementation component supporting the data flow described above."
+    },
+    {
+      "path": "api/linkedin-post.js",
+      "role": "Implementation component supporting the data flow described above."
+    },
+    {
+      "path": "backend/server.py",
+      "role": "Application entry point, interface, or integration boundary."
+    }
+  ],
+  "validation": "Repository tree and referenced source reviewed. Existing application tests, hosted deployments, paid providers, and external mutations were not re-run in this documentation review.",
+  "limitations": "A broad set of integrations increases capability and operational failure modes; each adapter needs explicit configuration and error states.",
+  "next_improvement": "Create a sandbox walkthrough for discovery, generation, and approval without posting to a live account.",
+  "related_repositories": [
+    "ai-radar-backend",
+    "ai-radar-demo",
+    "art-catalog-automation",
+    "gauntlet-blog-engine",
+    "gauntlet-shopify-seed"
+  ]
+}
